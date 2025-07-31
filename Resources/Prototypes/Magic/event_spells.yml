@@ -144,7 +144,7 @@
       #   orGroup: Guns # Frontier
       - id: BowImprovised
         orGroup: Guns
-      - id: WeaponFlareGun
+      - id: WeapolareGun
         orGroup: Guns
       - id: WeaponImprovisedPneumaticCannon
         orGroup: Guns
@@ -156,7 +156,7 @@
         orGroup: Guns
       - id: RevolverCapGun # Frontier: RevolverCapGun<RevolverCapGun
         orGroup: Guns
-      - id: RevolverCapGunFake # Frontier: RevolverCapGunFake<RevolverCapGunFake
+      - id: RevolverCapGunFake # Frontier: RevolverCapGunFake<NFRevolverCapGunFake
         orGroup: Guns
       speech: action-speech-spell-summon-guns
 
