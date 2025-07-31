@@ -283,8 +283,6 @@
     # Weapons
     - id: WeaponRevolverArgentiExpedition
       prob: 0.9
-    - id: WeaponRevolverArgentiExpedition
-      prob: 0.3
     # Armor
     - id: ClothingOuterCoatBHTrench
       prob: 0.4
