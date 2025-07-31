@@ -78,14 +78,14 @@
     Glass: 200
     Plastic: 400
 
-- type: latheRecipe
-  parent: WeaponEnergyPistolDisabler # Frontier: WeaponDisabler<WeaponEnergyPistolDisabler
-  id: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
-  result: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
-  materials:
-    Steel: 1000
-    Glass: 500
-    Plastic: 500
+#- type: latheRecipe
+#  parent: WeaponEnergyPistolDisabler # Frontier: WeaponDisabler<WeaponEnergyPistolDisabler
+#  id: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
+#  result: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
+#  materials:
+#    Steel: 1000
+#    Glass: 500
+#    Plastic: 500
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
@@ -134,13 +134,13 @@
     Gold: 500
 
 # region Grenades
-- type: latheRecipe
-  id: MagazineGrenadeEmpty # Frontier: add  prefix
-  result: MagazineGrenadeEmpty # Frontier: add  prefix
-  completetime: 3
-  materials:
-    Steel: 150
-    Plastic: 50
+#- type: latheRecipe
+#  id: MagazineGrenadeEmpty # Frontier: add  prefix
+#  result: MagazineGrenadeEmpty # Frontier: add  prefix
+#  completetime: 3
+#  materials:
+#    Steel: 150
+#    Plastic: 50
 
 - type: latheRecipe
   id: GrenadeEMP # Frontier: add  prefix
@@ -181,66 +181,3 @@
   result: HoloprojectorNfsdEmpty
 
 # region Upstream Removed
-- type: latheRecipe
-  parent: Handcuffs
-  id: Handcuffs
-
-- type: latheRecipe
-  parent: Zipties
-  id: Zipties
-
-- type: latheRecipe
-  parent: Stunbaton
-  id: Stunbaton
-
-- type: latheRecipe
-  parent: Truncheon
-  id: Truncheon
-
-- type: latheRecipe
-  parent: CombatKnife
-  id: CombatKnife
-
-- type: latheRecipe
-  parent: ClothingBackpackElectropack
-  id: ClothingBackpackElectropack
-
-- type: latheRecipe
-  parent: ForensicPad
-  id: ForensicPad
-
-- type: latheRecipe
-  parent: ClothingEyesHudSecurity
-  id: ClothingEyesHudSecurity
-
-- type: latheRecipe
-  parent: HoloprojectorSecurity
-  id: HoloprojectorSecurityEmpty
-
-- type: latheRecipe
-  parent: RiotShield
-  id: RiotShield
-
-- type: latheRecipe
-  parent: TelescopicShield
-  id: TelescopicShield
-
-- type: latheRecipe
-  parent: Flash
-  id: Flash
-
-- type: latheRecipe
-  id: TargetHuman
-  result: TargetHuman
-
-- type: latheRecipe
-  parent: TargetClown
-  id: TargetClown
-
-- type: latheRecipe
-  parent: TargetSyndicate
-  id: TargetSyndicate
-
-- type: latheRecipe
-  id: PortableRecharger
-  parent: PortableRecharger
