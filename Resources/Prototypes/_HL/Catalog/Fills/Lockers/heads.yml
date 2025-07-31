@@ -62,7 +62,7 @@
       prob: 0.1
     - id: RubberStampCaptain
     - id: SpaceCash1000
-    - id: NFWeaponEnergyPistolDisabler
+    - id: WeaponEnergyPistolDisabler
     - id: ClothingEyesGlassesCommand
 
 - type: entityTable
@@ -85,9 +85,9 @@
       prob: 0.1
     - id: RubberStampCaptain
     - id: SpaceCash1000
-    - id: NFWeaponEnergyPistolDisabler
+    - id: WeaponEnergyPistolDisabler
     - id: ClothingEyesGlassesCommand
-    - id: NFWeaponEnergyPistolLaserAntique
+    - id: WeaponEnergyPistolLaserAntique
 
 # Hardsuit table, used for suit storage as well
 - type: entityTable
@@ -151,7 +151,7 @@
     - id: RubberStampApproved
     - id: RubberStampDenied
     - id: RubberStampHop # Frontier
-    - id: NFWeaponEnergyPistolDisabler # Frontier
+    - id: WeaponEnergyPistolDisabler # Frontier
     - id: ClothingEyesHudCommand # Frontier
     - id: HoPIDCard
 
@@ -369,7 +369,7 @@
   table: !type:AllSelector
     children:
     #  - id: WeaponEnergyShotgun # Frontier
-    - id: NFHyperlinkBookSpaceLaw # Frontier: BookSpaceLaw<NFHyperlinkBookSpaceLaw
+    #- id: NFHyperlinkBookSpaceLaw # Frontier: BookSpaceLaw<NFHyperlinkBookSpaceLaw
     - id: BoxEncryptionKeySecurity # Frontier
     - id: CigarGoldCase # Frontier
       prob: 0.50 # Frontier
@@ -385,7 +385,7 @@
     - id: RubberStampHos # Frontier
     - id: SecurityTechFabCircuitboard # Frontier
     - id: CargoRequestSecurityComputerCircuitboard # Frontier
-    - id: NFWeaponEnergyPistolDisabler # Frontier
+    - id: WeaponEnergyPistolDisabler # Frontier
     - id: WantedListCartridge # Frontier
     - id: DrinkHosFlask
     - id: ClothingUniformJumpskirtHoSAlt

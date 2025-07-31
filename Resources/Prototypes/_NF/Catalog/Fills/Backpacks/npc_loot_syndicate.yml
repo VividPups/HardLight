@@ -197,7 +197,7 @@
   components:
   - type: SpawnItemsOnUse
     items:
-      - id: NFWeaponEnergyPistolLaserAdvancedExpedition
+      - id: WeaponEnergyPistolLaserAdvancedExpedition
       - id: SpaceCash2500
       # Bonus Loot T3
       - id: SpaceCash1000
@@ -227,7 +227,7 @@
   components:
   - type: SpawnItemsOnUse
     items:
-      - id: NFWeaponEnergyPistolLaserExpedition
+      - id: WeaponEnergyPistolLaserExpedition
       - id: SpaceCash2500
       # Bonus Loot T3
       - id: SpaceCash1000
@@ -525,7 +525,7 @@
         prob: 0.5
       - id: SpawnDungeonLootToolsAdvancedEngineering
         prob: 0.4
-      - id: NFBaseMagazineDrumRifle20
+      - id: BaseMagazineDrumRifle20
         prob: 0.1
       - id: MercCoin1
         prob: 1
@@ -557,7 +557,7 @@
         prob: 0.5
       - id: SpawnDungeonLootToolsAdvancedEngineering
         prob: 0.4
-      - id: NFBaseMagazineDrumRifle20
+      - id: BaseMagazineDrumRifle20
         prob: 0.1
       - id: MercCoin1
         prob: 1
@@ -782,7 +782,7 @@
     state: icon
   - type: SpawnItemsOnUse
     items:
-      - id: NFWeaponShotgunKammererExpedition
+      - id: WeaponShotgunKammererExpedition
       - id: SyndicateJawsOfLife
       - id: AmmoBox12_gaugeSlug
       - id: SpaceCash1000
@@ -813,7 +813,7 @@
   components:
   - type: SpawnItemsOnUse
     items:
-      - id: NFWeaponShotgunKammererExpedition
+      - id: WeaponShotgunKammererExpedition
       - id: JawsOfLife
       - id: SpaceCash1000
       # Bonus Loot T2

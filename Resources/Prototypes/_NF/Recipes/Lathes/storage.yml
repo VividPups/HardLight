@@ -2,17 +2,17 @@
 
 - type: latheRecipe
   abstract: true
-  id: NFBaseToolboxRecipe
+  id: BaseToolboxRecipe
   categories:
-  - StorageNF
+  - Storage
   completetime: 4
   materials:
     Steel: 300
 
 - type: latheRecipe
   abstract: true
-  id: NFBaseBoxRecipe
-  parent: NFBaseToolboxRecipe
+  id: BaseBoxRecipe
+  parent: BaseToolboxRecipe
   completetime: 1
   applyMaterialDiscount: false
   materials:
@@ -22,39 +22,39 @@
 
 # Toolboxes
 - type: latheRecipe
-  id: ToolboxArtisticNF
-  parent: NFBaseToolboxRecipe
+  id: ToolboxArtistic
+  parent: BaseToolboxRecipe
   result: ToolboxArtistic
   name: lathe-recipe-ToolboxArtisticNF-name
 
 - type: latheRecipe
-  id: ToolboxElectricalNF
-  parent: NFBaseToolboxRecipe
+  id: ToolboxElectrical
+  parent: BaseToolboxRecipe
   result: ToolboxElectrical
   name: lathe-recipe-ToolboxElectricalNF-name
 
 - type: latheRecipe
-  id: ToolboxMechanicalNF
-  parent: NFBaseToolboxRecipe
+  id: ToolboxMechanical
+  parent: BaseToolboxRecipe
   result: ToolboxMechanical
   name: lathe-recipe-ToolboxMechanicalNF-name
 
 - type: latheRecipe
-  id: ToolboxEmergencyNF
-  parent: NFBaseToolboxRecipe
+  id: ToolboxEmergency
+  parent: BaseToolboxRecipe
   result: ToolboxEmergency
   name: lathe-recipe-ToolboxEmergencyNF-name
 
 # Weapon cases
 - type: latheRecipe
   id: WeaponCaseShort
-  parent: NFBaseToolboxRecipe
+  parent: BaseToolboxRecipe
   result: WeaponCaseShort
   name: lathe-recipe-WeaponCaseShort-name
 
 - type: latheRecipe
   id: WeaponCaseLong
-  parent: NFBaseToolboxRecipe
+  parent: BaseToolboxRecipe
   result: WeaponCaseLong
   name: lathe-recipe-WeaponCaseLong-name
   materials:
@@ -62,7 +62,7 @@
 
 - type: latheRecipe
   id: WeaponCaseHeavy
-  parent: NFBaseToolboxRecipe
+  parent: BaseToolboxRecipe
   result: WeaponCaseHeavy
   name: lathe-recipe-WeaponCaseHeavy-name
   materials:
@@ -70,13 +70,13 @@
 
 - type: latheRecipe
   id: WeaponCaseShortAmmo
-  parent: NFBaseToolboxRecipe
+  parent: BaseToolboxRecipe
   result: WeaponCaseShortAmmo
   name: lathe-recipe-WeaponCaseShortAmmo-name
 
 - type: latheRecipe
   id: WeaponCaseShortExplosives
-  parent: NFBaseToolboxRecipe
+  parent: BaseToolboxRecipe
   result: WeaponCaseShortExplosives
   name: lathe-recipe-WeaponCaseShortExplosives-name
 
@@ -113,7 +113,7 @@
   name: lathe-recipe-NFHappyHonkMcCargoEmpty-name
   categories:
   - Brand
-  - StorageNF
+  - Storage
 
 - type: latheRecipe
   id: NFHappyHonkCluwneEmpty

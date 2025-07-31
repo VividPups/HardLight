@@ -2,7 +2,7 @@
 # TODO: Reorganize these into common packs.
 
 - type: latheRecipePack
-  id: NFMercenaryTechfabDeprecatedStatic
+  id: MercenaryTechfabDeprecatedStatic
   recipes:
 # Shared lathe recipes
 ## Basic tools
@@ -18,10 +18,10 @@
   - Signaller
   - ClothingMaskWeldingGas
 ## Basic storage
-  - ToolboxArtisticNF
-  - ToolboxElectricalNF
-  - ToolboxMechanicalNF
-  - ToolboxEmergencyNF
+  - ToolboxArtistic
+  - ToolboxElectrical
+  - ToolboxMechanical
+  - ToolboxEmergency
 ## Basic parts
   - CableStack
   - LightTube
@@ -43,7 +43,7 @@
   - AirTank
 # Mercenary techfab
 ## Clothing / Armor
-  - NFRiotShield
+  - RiotShield
   - ClothingNeckIFFNeutral
   - ClothingNeckIFFGreen
   - ClothingNeckIFFRed
@@ -78,22 +78,22 @@
   - WeaponCaseShortAmmo
   - WeaponCaseShortExplosives
 ## Weapons
-  - NFCombatKnife
-  - NFWeaponEnergyPistolLaserSvalinn # After the changes made to windows shouldn't be that much of an issue now if it's widely available
-  - NFWeaponEnergyPistolLaser # After the changes made to windows shouldn't be that much of an issue now if it's widely available
-  - NFWeaponRevolverArgenti
-  - NFWeaponPistolMk58
-  - NFWeaponShotgunDoubleBarreled
-  - NFWeaponRifleAssaultNovaliteC1
-  - NFWeaponRifleAssaultGestio
-  - BaseBallBatNF
+  - CombatKnife
+  - WeaponEnergyPistolLaserSvalinn # After the changes made to windows shouldn't be that much of an issue now if it's widely available
+  - WeaponEnergyPistolLaser # After the changes made to windows shouldn't be that much of an issue now if it's widely available
+  - WeaponRevolverArgenti
+  - WeaponPistolMk58
+  - WeaponShotgunDoubleBarreled
+  - WeaponRifleAssaultNovaliteC1
+  - WeaponRifleAssaultGestio
+  - BaseBallBat
   - CrossbowModern
   - WeaponPistolPollock
   ## Cyborg Modules
   # - BorgModuleMercenary # mono
 
 - type: latheRecipePack
-  id: NFMercenaryTechfabDynamicDeprecated
+  id: MercenaryTechfabDynamicDeprecated
   recipes:
 # Shared lathe recipes
 ## Advanced tools
@@ -102,12 +102,12 @@
   - PowerDrill
   - JetpackVoid
   - PowerCellHigh
-  # - PowerCellHyperNF
+  # - PowerCellHyper
   - PowerCellMicroreactor
 # Mercenary techfab
 ## Armor
-  - NFTelescopicShield
-  - ClothingOuterArmorBulletproofNF
+  - TelescopicShield
+  - ClothingOuterArmorBulletproof
   - ClothingOuterCoatBHTrench
   - ClothingOuterArmorPunkRandomized
   - ClothingOuterArmorPunkRed
@@ -133,12 +133,12 @@
   - ClothingShoesBootsMagSecurity
   - ClothingShoesBootsMagMercenary
 ## Utilities
-  - NFForensicPad
+  - ForensicPad
   - ClothingEyesHudBountyHunter
   - ClothingEyesPunkInfoShades
-  - PinpointerUniversalNF
-  - NFHandcuffs
-  - NFPortableRecharger
+  - PinpointerUniversal
+  - Handcuffs
+  - PortableRecharger
   - SignalTrigger
   - TimerTrigger
   - VoiceTrigger
@@ -147,15 +147,15 @@
   - ClothingBackpackSatchelHolding
   - ClothingBackpackDuffelHolding
   - ClothingBackpackMessengerHolding
-  - FlashlightSecliteNF
+  - FlashlightSeclite
 ## Weapons
   - WeaponGrapplingGun
-  - BolaNF
+  - Bola
   - FlashPayload
   - ChemicalPayload
 ## Ammo boxes
 
 - type: latheRecipePack
-  id: NFMercenaryTechfabDeprecatedEmag
+  id: MercenaryTechfabDeprecatedEmag
   recipes:
   - Wirecutter

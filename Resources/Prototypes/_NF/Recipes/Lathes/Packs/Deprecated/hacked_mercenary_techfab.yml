@@ -2,7 +2,7 @@
 # TODO: Reorganize these into common packs.
 
 - type: latheRecipePack
-  id: NFHackedMercenaryTechfabDeprecatedStatic
+  id: HackedMercenaryTechfabDeprecatedStatic
   recipes:
 # Shared lathe recipes
 ## Basic tools
@@ -16,10 +16,10 @@
   - Signaller
   - ClothingMaskWeldingGas
 ## Basic storage
-  - ToolboxArtisticNF
-  - ToolboxElectricalNF
-  - ToolboxMechanicalNF
-  - ToolboxEmergencyNF
+  - ToolboxArtistic
+  - ToolboxElectrical
+  - ToolboxMechanical
+  - ToolboxEmergency
 ## Basic parts
   - CableStack
   - LightTube
@@ -41,7 +41,7 @@
   - AirTank
 # Mercenary techfab
 ## Clothing / Armor
-  - NFRiotShield
+  - RiotShield
   - ClothingHandsMercenaryGlovesCombat
   - ClothingHandsGlovesCombat
   - ClothingOuterArmorPunkRandomized
@@ -50,7 +50,7 @@
   - ClothingOuterArmorPunkOrange
   - ClothingOuterArmorElitePunkRandomized
   - ClothingBeltPunkRandomized
-  - NFPouchPunk
+  - PouchPunk
   - ClothingShoesBootsPunkRandomized
   - ClothingEyesPunkGoggles
   - ClothingEyesPunkInfoShades
@@ -69,17 +69,17 @@
   - WeaponCaseShortAmmo
   - WeaponCaseShortExplosives
 ## Weapons
-  - NFWeaponEnergyPistolLaserSvalinn # After the changes made to windows shouldn't be that much of an issue now if it's widely available
-  - NFWeaponEnergyPistolLaser
-  - NFWeaponPistolMk58
-  - NFWeaponRifleAssaultNovaliteC1
-  - NFWeaponRifleAssaultGestio
-  - BaseBallBatNF
+  - WeaponEnergyPistolLaserSvalinn # After the changes made to windows shouldn't be that much of an issue now if it's widely available
+  - WeaponEnergyPistolLaser
+  - WeaponPistolMk58
+  - WeaponRifleAssaultNovaliteC1
+  - WeaponRifleAssaultGestio
+  - BaseBallBat
   - Katana
-  - KukriKnifeNF
+  - KukriKnife
 
 - type: latheRecipePack
-  id: NFHackedMercenaryTechfabDeprecated
+  id: HackedMercenaryTechfabDeprecated
   recipes:
 # Shared lathe recipes
 ## Advanced tools
@@ -91,8 +91,8 @@
   - PowerCellMicroreactor
 # Mercenary techfab
 ## Armor
-  - NFTelescopicShield
-  - ClothingOuterArmorBulletproofNF
+  - TelescopicShield
+  - ClothingOuterArmorBulletproof
   - ClothingOuterCoatBHTrench
 ## EVA / Hardsuits
   - ClothingOuterHardsuitCap
@@ -102,10 +102,10 @@
   - ClothingShoesBootsMagSecurity
   - ClothingShoesBootsMagMercenary
 ## Utilities
-  - PinpointerUniversalNF
-  - NFHandcuffs
+  - PinpointerUniversal
+  - Handcuffs
   - SignalTrigger
-  - NFPortableRecharger
+  - PortableRecharger
   - TimerTrigger
   - VoiceTrigger
   - TurboItemRechargerCircuitboard
@@ -113,10 +113,10 @@
   - ClothingBackpackSatchelHolding
   - ClothingBackpackDuffelHolding
   - ClothingBackpackMessengerHolding
-  - FlashlightSecliteNF
+  - FlashlightSeclite
 ## Weapons
   - Truncheon
-  - MacheteNF
+  - Machete
   - Stunbaton
-  - BolaNF
+  - Bola
   - ChemicalPayload

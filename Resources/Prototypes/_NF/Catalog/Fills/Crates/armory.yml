@@ -7,7 +7,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponRifleAssaultGestio
+      - id: WeaponRifleAssaultGestio
         amount: 2
       - id: Magazine7.62x39mmLowCapacityFMJ
         amount: 6
@@ -24,7 +24,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponSubMachineGunWt550Expedition
+      - id: WeaponSubMachineGunWt550Expedition
         amount: 2
       - id: Magazine4.6x30mmSubMachineGunTopMountedFMJ
         amount: 4
@@ -40,7 +40,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponShotgunEnforcerExpedition
+      - id: WeaponShotgunEnforcerExpedition
         amount: 2
       - id: AmmoBox12_gaugeBuckshot
         amount: 3
@@ -56,7 +56,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponEnergyRifleCarbineExpedition
+      - id: WeaponEnergyRifleCarbineExpedition
         amount: 3
 
 - type: entity
@@ -70,7 +70,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponEnergySubMachineGunDeltaVExpedition
+      - id: WeaponEnergySubMachineGunDeltaVExpedition
         amount: 3
 
 - type: entity
@@ -84,7 +84,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponPistolMk58Expedition
+    - id: WeaponPistolMk58Expedition
       amount: 2
     - id: Magazine9x19mmPistolFMJ
       amount: 4
@@ -100,7 +100,7 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponRifleAssaultGestioExpedition
+      - id: WeaponRifleAssaultGestioExpedition
         amount: 2
       - id: Magazine7.62x39mmLowCapacityFMJ
         amount: 6
@@ -116,9 +116,9 @@
   components:
   - type: StorageFill
     contents:
-      - id: NFWeaponRifleAssaultNovaliteC1Expedition
+      - id: WeaponRifleAssaultNovaliteC1Expedition
         amount: 2
-      - id: NFMagazineClipRifle20
+      - id: MagazineClipRifle20
         amount: 6
 
 # Ammo crates

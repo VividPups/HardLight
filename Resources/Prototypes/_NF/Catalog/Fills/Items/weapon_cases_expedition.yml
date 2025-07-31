@@ -8,7 +8,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponPistolMk58Expedition
+    - id: WeaponPistolMk58Expedition
       amount: 1
     - id: Magazine9x19mmPistolFMJ
       amount: 2
@@ -47,7 +47,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponPistolViperExpedition
+    - id: WeaponPistolViperExpedition
       amount: 1
     - id: Magazine9x19mmPistolFMJ
       amount: 2
@@ -88,7 +88,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponPistolPollockExpedition
+    - id: WeaponPistolPollockExpedition
       amount: 1
     - id: Magazine9x19mmPistolFMJ
       amount: 2
@@ -102,7 +102,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverArgentiExpedition
+    - id: WeaponRevolverArgentiExpedition
       amount: 1
     - id: SpeedLoader5.56x45mmFMJ
       amount: 2
@@ -128,7 +128,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverRitland45Expedition
+    - id: WeaponRevolverRitland45Expedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -141,7 +141,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverWard45Expedition
+    - id: WeaponRevolverWard45Expedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -154,7 +154,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverFitzExpedition
+    - id: WeaponRevolverFitzExpedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -167,7 +167,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverFaithExpedition
+    - id: WeaponRevolverFaithExpedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -180,7 +180,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverLuckyExpedition
+    - id: WeaponRevolverLuckyExpedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -193,7 +193,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRevolverPirateExpedition
+    - id: WeaponRevolverPirateExpedition
       amount: 1
     - id: SpeedLoader45_magnumFMJ
       amount: 2
@@ -246,7 +246,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponShotgunKammererExpedition
+    - id: WeaponShotgunKammererExpedition
       amount: 1
     - id: AmmoBox12_gaugeBuckshot
       amount: 2
@@ -259,7 +259,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponShotgunEnforcerExpedition
+    - id: WeaponShotgunEnforcerExpedition
       amount: 1
     - id: AmmoBox12_gaugeBuckshot
       amount: 2
@@ -272,7 +272,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponShotgunBulldogExpedition
+    - id: WeaponShotgunBulldogExpedition
       amount: 1
     - id: Magazine12_gaugeBuckshot
       amount: 2
@@ -293,7 +293,7 @@
       amount: 2
     - id: AmmoBox7.62x51mmBigFMJ
       amount: 2
-      
+
 - type: entity
   parent: WeaponCaseLong
   id: WeaponCaseLongSniperCeremonialExpedition
@@ -323,7 +323,7 @@
       amount: 2
     - id: AmmoBox4.6x30mmFMJ
       amount: 1
-    - id: NFMagazineSubMachineGunTopMounted35
+    - id: MagazineSubMachineGunTopMounted35
       amount: 3
 
 - type: entity
@@ -334,7 +334,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponSubMachineGunAtreidesExpedition
+    - id: WeaponSubMachineGunAtreidesExpedition
       amount: 1
     - id: Magazine5.7x28mmSubMachineGunFMJ
       amount: 2
@@ -355,7 +355,7 @@
       amount: 2
     - id: AmmoBox45_ACPFMJ
       amount: 1
-    - id: NFMagazineSubMachineGun35
+    - id: MagazineSubMachineGun35
       amount: 3
 
 - type: entity
@@ -366,7 +366,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponSubMachineGunC20rExpedition
+    - id: WeaponSubMachineGunC20rExpedition
       amount: 1
     - id: Magazine9x19mmSubMachineGunFMJ
       amount: 2
@@ -381,7 +381,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponSubMachineGunTypewriterExpedition
+    - id: WeaponSubMachineGunTypewriterExpedition
       amount: 1
     - id: Magazine45_ACPSubMachineGunFMJ
       amount: 2
@@ -397,7 +397,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultGestioExpedition
+    - id: WeaponRifleAssaultGestioExpedition
       amount: 1
     - id: Magazine7.62x39mmLowCapacityFMJ
       amount: 3
@@ -410,9 +410,9 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultNovaliteC1Expedition
+    - id: WeaponRifleAssaultNovaliteC1Expedition
       amount: 1
-    - id: NFMagazineClipRifle20
+    - id: MagazineClipRifle20
       amount: 2
 
 - type: entity
@@ -423,7 +423,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultLecterExpedition
+    - id: WeaponRifleAssaultLecterExpedition
       amount: 1
     - id: Magazine5.56x45mmFMJ
       amount: 2
@@ -436,7 +436,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultSm
+    - id: WeaponRifleAssaultSm
       amount: 1
     - id: Magazine7.62x39mmFMJ
       amount: 2
@@ -449,7 +449,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultM90GrenadeLauncherExpedition
+    - id: WeaponRifleAssaultM90GrenadeLauncherExpedition
       amount: 1
     - id: Magazine5.56x45mmFMJ
       amount: 2
@@ -462,7 +462,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultVulcanExpedition
+    - id: WeaponRifleAssaultVulcanExpedition
       amount: 1
     - id: Magazine7.62x51mmFMJ
       amount: 2
@@ -475,11 +475,11 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleAssaultJackdawExpedition
+    - id: WeaponRifleAssaultJackdawExpedition
       amount: 1
     - id: Magazine6.35x40mmCaseless
       amount: 2
-    - id: NFAmmunitionBoxBigRifle25
+    - id: AmmunitionBoxBigRifle25
       amount: 1
 
 #region Energy
@@ -491,7 +491,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyPistolLaserExpedition
+    - id: WeaponEnergyPistolLaserExpedition
       amount: 2
 
 - type: entity
@@ -502,7 +502,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyPistolLaserSvalinnExpedition
+    - id: WeaponEnergyPistolLaserSvalinnExpedition
       amount: 1
     - id: PowerCellHigh
       amount: 2
@@ -515,7 +515,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyRifleCarbineExpedition
+    - id: WeaponEnergyRifleCarbineExpedition
       amount: 1
 
 - type: entity
@@ -526,7 +526,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergySubMachineGunDeltaVExpedition
+    - id: WeaponEnergySubMachineGunDeltaVExpedition
       amount: 1
 
 - type: entity
@@ -537,7 +537,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyPistolLaserAntiqueExpedition
+    - id: WeaponEnergyPistolLaserAntiqueExpedition
       amount: 1
 
 - type: entity
@@ -548,7 +548,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyPistolLaserAdvancedExpedition
+    - id: WeaponEnergyPistolLaserAdvancedExpedition
       amount: 1
 
 - type: entity
@@ -559,7 +559,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyRifleSniperCannonExpedition
+    - id: WeaponEnergyRifleSniperCannonExpedition
       amount: 1
 
 - type: entity
@@ -570,7 +570,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyRifleSniperXrayCannonExpedition
+    - id: WeaponEnergyRifleSniperXrayCannonExpedition
       amount: 1
 
 - type: entity
@@ -581,7 +581,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponEnergyRifleTemperatureExpedition
+    - id: WeaponEnergyRifleTemperatureExpedition
       amount: 1
     - id: AmmoBox7.62x39mmFMJ
       amount: 2
@@ -594,7 +594,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponRifleSniperHristovExpedition
+    - id: WeaponRifleSniperHristovExpedition
       amount: 1
     - id: AmmoBox14.5x114mm
       amount: 2
@@ -634,9 +634,9 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponLauncherRocketExpedition
+    - id: WeaponLauncherRocketExpedition
       amount: 1
-    - id: NFCartridgeRocket
+    - id: CartridgeRocket
       amount: 2
 
 - type: entity
@@ -647,7 +647,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponLauncherChinaLakeExpedition
+    - id: WeaponLauncherChinaLakeExpedition
       amount: 1
     - id: 40mmGrenadeFragmentation
       amount: 2
@@ -661,7 +661,7 @@
   components:
   - type: StorageFill
     contents:
-    - id: NFWeaponLightMachineGunL6Expedition
+    - id: WeaponLightMachineGunL6Expedition
       amount: 1
     - id: Magazine7.62x39mmBox
       amount: 2

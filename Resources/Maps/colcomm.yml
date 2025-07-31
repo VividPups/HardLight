@@ -44133,49 +44133,49 @@ entities:
     - type: Transform
       pos: -5.5,7.5
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunBuckshot
+- proto: AmmunitionBoxShellShotgunBuckshot
   entities:
   - uid: 1093
     components:
     - type: Transform
       pos: 34.536674,-20.85105
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunFlare
+- proto: AmmunitionBoxShellShotgunFlare
   entities:
   - uid: 1329
     components:
     - type: Transform
       pos: 34.567924,-22.2573
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunIncendiary
+- proto: AmmunitionBoxShellShotgunIncendiary
   entities:
   - uid: 1311
     components:
     - type: Transform
       pos: 34.52105,-21.1323
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunSlug
+- proto: AmmunitionBoxShellShotgunSlug
   entities:
   - uid: 1335
     components:
     - type: Transform
       pos: 34.5523,-21.72605
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunTranquilizer
+- proto: AmmunitionBoxShellShotgunTranquilizer
   entities:
   - uid: 1323
     components:
     - type: Transform
       pos: 34.536674,-21.41355
       parent: 1668
-- proto: NFAmmunitionBoxShellShotgunUranium
+- proto: AmmunitionBoxShellShotgunUranium
   entities:
   - uid: 1334
     components:
     - type: Transform
       pos: 34.567924,-21.97605
       parent: 1668
-- proto: NFAshtray
+- proto: Ashtray
   entities:
   - uid: 2024
     components:
@@ -44202,14 +44202,14 @@ entities:
     - type: Transform
       pos: 20.807465,-32.49228
       parent: 1668
-- proto: NFMagazinePistol35Practice
+- proto: MagazinePistol35Practice
   entities:
   - uid: 2984
     components:
     - type: Transform
       pos: 11.430329,8.720324
       parent: 1668
-- proto: NFMagazinePistol45
+- proto: MagazinePistol45
   entities:
   - uid: 6885
     components:
@@ -44218,7 +44218,7 @@ entities:
     - type: Physics
       canCollide: False
     - type: InsideEntityStorage
-- proto: NFMagazineRifle20
+- proto: MagazineRifle20
   entities:
   - uid: 2335
     components:
@@ -44259,14 +44259,14 @@ entities:
     - type: Physics
       canCollide: False
     - type: InsideEntityStorage
-- proto: NFMagazineRifle20Practice
+- proto: MagazineRifle20Practice
   entities:
   - uid: 1735
     components:
     - type: Transform
       pos: 11.430329,9.079699
       parent: 1668
-- proto: NFMagazineRifle30
+- proto: MagazineRifle30
   entities:
   - uid: 2337
     components:
@@ -44278,7 +44278,7 @@ entities:
     - type: Transform
       pos: 11.480659,26.619143
       parent: 1668
-- proto: NFMagazineShotgunDrum
+- proto: MagazineShotgunDrum
   entities:
   - uid: 2362
     components:
@@ -44290,7 +44290,7 @@ entities:
     - type: Transform
       pos: 16.162495,24.820536
       parent: 1668
-- proto: NFMagazineShotgunDrumBeanbag
+- proto: MagazineShotgunDrumBeanbag
   entities:
   - uid: 2365
     components:
@@ -44302,7 +44302,7 @@ entities:
     - type: Transform
       pos: 16.610413,24.49762
       parent: 1668
-- proto: NFMagazineShotgunDrumIncendiary
+- proto: MagazineShotgunDrumIncendiary
   entities:
   - uid: 2364
     components:
@@ -44314,7 +44314,7 @@ entities:
     - type: Transform
       pos: 16.152079,24.508036
       parent: 1668
-- proto: NFMagazineShotgunDrumSlug
+- proto: MagazineShotgunDrumSlug
   entities:
   - uid: 2363
     components:
@@ -44326,7 +44326,7 @@ entities:
     - type: Transform
       pos: 16.641663,24.820536
       parent: 1668
-- proto: NFMagazineSubMachineGun35
+- proto: MagazineSubMachineGun35
   entities:
   - uid: 2314
     components:
@@ -44348,14 +44348,14 @@ entities:
     - type: Transform
       pos: 11.511909,22.641312
       parent: 1668
-- proto: NFMagazineSubMachineGun35Practice
+- proto: MagazineSubMachineGun35Practice
   entities:
   - uid: 1742
     components:
     - type: Transform
       pos: 11.445954,9.423449
       parent: 1668
-- proto: NFMagazineSubMachineGunTopMounted35
+- proto: MagazineSubMachineGunTopMounted35
   entities:
   - uid: 2334
     components:
@@ -44384,7 +44384,7 @@ entities:
     - type: Transform
       pos: 34.5,-28.5
       parent: 1668
-- proto: NFSpeedLoaderPistol45
+- proto: SpeedLoaderPistol45
   entities:
   - uid: 2431
     components:
@@ -44426,7 +44426,7 @@ entities:
     - type: Transform
       pos: 16.07121,34.413292
       parent: 1668
-- proto: NFWeaponEnergyPistolDisabler
+- proto: WeaponEnergyPistolDisabler
   entities:
   - uid: 6817
     components:
@@ -44449,14 +44449,14 @@ entities:
     - type: Physics
       canCollide: False
     - type: InsideEntityStorage
-- proto: NFWeaponEnergyPistolDisablerPractice
+- proto: WeaponEnergyPistolDisablerPractice
   entities:
   - uid: 4180
     components:
     - type: Transform
       pos: 11.414704,7.5328236
       parent: 1668
-- proto: NFWeaponEnergyPistolLaser
+- proto: WeaponEnergyPistolLaser
   entities:
   - uid: 2402
     components:
@@ -44473,7 +44473,7 @@ entities:
     - type: Transform
       pos: 11.403074,28.425316
       parent: 1668
-- proto: NFWeaponEnergyPistolLaserAdvanced
+- proto: WeaponEnergyPistolLaserAdvanced
   entities:
   - uid: 2396
     components:
@@ -44490,7 +44490,7 @@ entities:
     - type: Transform
       pos: 16.496824,28.430763
       parent: 1668
-- proto: NFWeaponEnergyPistolLaserMakeshift
+- proto: WeaponEnergyPistolLaserMakeshift
   entities:
   - uid: 2399
     components:
@@ -44507,7 +44507,7 @@ entities:
     - type: Transform
       pos: 10.496824,28.50344
       parent: 1668
-- proto: NFWeaponEnergyPistolLaserSvalinn
+- proto: WeaponEnergyPistolLaserSvalinn
   entities:
   - uid: 2405
     components:
@@ -44524,7 +44524,7 @@ entities:
     - type: Transform
       pos: 12.371824,28.456566
       parent: 1668
-- proto: NFWeaponEnergyPistolPulse
+- proto: WeaponEnergyPistolPulse
   entities:
   - uid: 2419
     components:
@@ -44546,7 +44546,7 @@ entities:
     - type: Transform
       pos: 13.539394,34.51746
       parent: 1668
-- proto: NFWeaponEnergyRifleAssaultPulseCarbine
+- proto: WeaponEnergyRifleAssaultPulseCarbine
   entities:
   - uid: 2411
     components:
@@ -44568,7 +44568,7 @@ entities:
     - type: Transform
       pos: 12.5012,34.507042
       parent: 1668
-- proto: NFWeaponEnergyRifleCarbine
+- proto: WeaponEnergyRifleCarbine
   entities:
   - uid: 2390
     components:
@@ -44585,14 +44585,14 @@ entities:
     - type: Transform
       pos: 14.512449,28.453339
       parent: 1668
-- proto: NFWeaponEnergyRifleCarbinePractice
+- proto: WeaponEnergyRifleCarbinePractice
   entities:
   - uid: 4179
     components:
     - type: Transform
       pos: 11.461579,8.095324
       parent: 1668
-- proto: NFWeaponEnergyRifleSniperCannon
+- proto: WeaponEnergyRifleSniperCannon
   entities:
   - uid: 2393
     components:
@@ -44609,7 +44609,7 @@ entities:
     - type: Transform
       pos: 15.528074,28.602638
       parent: 1668
-- proto: NFWeaponEnergyRifleSniperXrayCannon
+- proto: WeaponEnergyRifleSniperXrayCannon
   entities:
   - uid: 2838
     components:
@@ -44631,7 +44631,7 @@ entities:
     - type: Transform
       pos: 14.507596,34.500866
       parent: 1668
-- proto: NFWeaponEnergySubMachineGunDisabler
+- proto: WeaponEnergySubMachineGunDisabler
   entities:
   - uid: 2220
     components:
@@ -44653,7 +44653,7 @@ entities:
     - type: Transform
       pos: -30.479265,-10.454217
       parent: 1668
-- proto: NFWeaponPistolN1984
+- proto: WeaponPistolN1984
   entities:
   - uid: 1383
     components:
@@ -44667,7 +44667,7 @@ entities:
     - type: Physics
       canCollide: False
     - type: InsideEntityStorage
-- proto: NFWeaponRevolverWard45
+- proto: WeaponRevolverWard45
   entities:
   - uid: 2427
     components:
@@ -44689,7 +44689,7 @@ entities:
     - type: Transform
       pos: 15.508711,34.397667
       parent: 1668
-- proto: NFWeaponRifleAssaultLecter
+- proto: WeaponRifleAssaultLecter
   entities:
   - uid: 2302
     components:
@@ -44725,7 +44725,7 @@ entities:
     - type: Physics
       canCollide: False
     - type: InsideEntityStorage
-- proto: NFWeaponRifleAssaultM90GrenadeLauncher
+- proto: WeaponRifleAssaultM90GrenadeLauncher
   entities:
   - uid: 2573
     components:
@@ -44747,7 +44747,7 @@ entities:
     - type: Transform
       pos: 10.572034,30.38524
       parent: 1668
-- proto: NFWeaponRifleAssaultSm
+- proto: WeaponRifleAssaultSm
   entities:
   - uid: 2330
     components:
@@ -44769,7 +44769,7 @@ entities:
     - type: Transform
       pos: 10.496737,26.424412
       parent: 1668
-- proto: NFWeaponShotgunEnforcer
+- proto: WeaponShotgunEnforcer
   entities:
   - uid: 2358
     components:
@@ -44791,7 +44791,7 @@ entities:
     - type: Transform
       pos: 15.464579,22.523218
       parent: 1668
-- proto: NFWeaponShotgunKammerer
+- proto: WeaponShotgunKammerer
   entities:
   - uid: 2366
     components:
@@ -44813,7 +44813,7 @@ entities:
     - type: Transform
       pos: 15.495829,24.43512
       parent: 1668
-- proto: NFWeaponSubMachineGunC20r
+- proto: WeaponSubMachineGunC20r
   entities:
   - uid: 2452
     components:
@@ -44835,7 +44835,7 @@ entities:
     - type: Transform
       pos: 10.556818,34.413177
       parent: 1668
-- proto: NFWeaponSubMachineGunDrozd
+- proto: WeaponSubMachineGunDrozd
   entities:
   - uid: 2259
     components:
@@ -44857,7 +44857,7 @@ entities:
     - type: Transform
       pos: 10.558374,22.57545
       parent: 1668
-- proto: NFWeaponSubMachineGunWt550
+- proto: WeaponSubMachineGunWt550
   entities:
   - uid: 2374
     components:

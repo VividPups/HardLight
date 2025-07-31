@@ -100,7 +100,7 @@
     - id: SpaceCash500
       prob: 0.45
     # Weapons
-    - id: NFWeaponPistolMk58Expedition
+    - id: WeaponPistolMk58Expedition
       prob: 0.9
     # Armor
     - id: ClothingOuterVestWebMercenary
@@ -156,7 +156,7 @@
     - id: SpaceCash500
       prob: 0.45
     # Weapons
-    - id: NFWeaponRifleAssaultNovaliteC1Expedition
+    - id: WeaponRifleAssaultNovaliteC1Expedition
       prob: 0.9
     # Armor
     - id: ClothingOuterVestWebMercenary
@@ -178,7 +178,7 @@
       prob: 0.7
     - id: SpawnDungeonLootToolsAdvancedEngineering
       prob: 0.3
-    - id: NFBaseMagazineDrumRifle20
+    - id: BaseMagazineDrumRifle20
       prob: 0.05
     - id: MercCoin1
       prob: 1
@@ -194,15 +194,15 @@
     items:
     - id: AmmoBox5.56x45mmFMJ
       prob: 0.9
-    - id: NFMagazineClipRifle20
+    - id: MagazineClipRifle20
       prob: 0.9
-    - id: NFMagazineClipRifle20
+    - id: MagazineClipRifle20
       prob: 0.9
-    - id: NFMagazineClipRifle20
+    - id: MagazineClipRifle20
       prob: 0.2
     - id: AmmoBox5.56x45mmBigFMJ
       prob: 0.2
-    - id: NFBaseMagazineDrumRifle20
+    - id: BaseMagazineDrumRifle20
       prob: 0.05
     - id: MercCoin1
       prob: 1
@@ -225,7 +225,7 @@
     - id: SpaceCash500
       prob: 0.45
     # Weapons
-    - id: NFWeaponShotgunKammererExpedition
+    - id: WeaponShotgunKammererExpedition
       prob: 0.9
     # Armor
     - id: ClothingOuterArmorBasicSlim
@@ -281,9 +281,9 @@
     - id: SpaceCash500
       prob: 0.45
     # Weapons
-    - id: NFWeaponRevolverArgentiExpedition
+    - id: WeaponRevolverArgentiExpedition
       prob: 0.9
-    - id: NFWeaponRevolverArgentiExpedition
+    - id: WeaponRevolverArgentiExpedition
       prob: 0.3
     # Armor
     - id: ClothingOuterCoatBHTrench
@@ -353,7 +353,7 @@
     - id: SpaceCash1000
       prob: 0.2
     # Weapons
-    - id: NFWeaponEnergyPistolLaserExpedition
+    - id: WeaponEnergyPistolLaserExpedition
       prob: 0.9
     - id: SawElectric
       prob: 0.7
@@ -429,7 +429,7 @@
     - id: SpaceCash1000
       prob: 0.2
     # Weapons
-    - id: NFWeaponRifleAssaultGestioExpedition
+    - id: WeaponRifleAssaultGestioExpedition
       prob: 0.9
     # Armor
     # Items
@@ -566,7 +566,7 @@
       prob: 0.7
     - id: SpawnDungeonLootVaultGuns
       prob: 0.4
-    - id: NFBaseMagazineDrumRifle20
+    - id: BaseMagazineDrumRifle20
       prob: 0.1
     - id: MercCoin1
       prob: 1

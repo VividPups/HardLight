@@ -4,7 +4,7 @@
   id: BaseEmptyMagazineRecipe
   abstract: true
   categories:
-  - NFMagazines
+  - Magazines
   completetime: 1
 
 - type: latheRecipe
@@ -31,7 +31,7 @@
 - type: latheRecipe
   parent: BaseWeaponRecipe
   id: WeaponPistolPollock
-  result: NFWeaponPistolPollock
+  result: WeaponPistolPollock
   completetime: 3
   materials:
     Steel: 1000
@@ -40,8 +40,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyRifleCarbinePractice
-  result: NFWeaponEnergyRifleCarbinePractice
+  id: WeaponEnergyRifleCarbinePractice
+  result: WeaponEnergyRifleCarbinePractice
   completetime: 6
   materials:
     Steel: 1800
@@ -50,8 +50,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyRifleCarbine
-  result: NFWeaponEnergyRifleCarbine
+  id: WeaponEnergyRifleCarbine
+  result: WeaponEnergyRifleCarbine
   completetime: 6
   materials:
     Steel: 2000
@@ -60,8 +60,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipe
-  id: NFWeaponEnergyPistolDisablerPractice
-  result: NFWeaponEnergyPistolDisablerPractice
+  id: WeaponEnergyPistolDisablerPractice
+  result: WeaponEnergyPistolDisablerPractice
   completetime: 4
   materials:
     Steel: 500
@@ -70,8 +70,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipe
-  id: NFWeaponEnergyPistolDisabler
-  result: NFWeaponEnergyPistolDisabler
+  id: WeaponEnergyPistolDisabler
+  result: WeaponEnergyPistolDisabler
   completetime: 6
   materials:
     Steel: 500
@@ -79,9 +79,9 @@
     Plastic: 400
 
 - type: latheRecipe
-  parent: NFWeaponEnergyPistolDisabler # Frontier: WeaponDisabler<NFWeaponEnergyPistolDisabler
-  id: NFWeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<NFWeaponEnergySubMachineGunDisabler
-  result: NFWeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<NFWeaponEnergySubMachineGunDisabler
+  parent: WeaponEnergyPistolDisabler # Frontier: WeaponDisabler<WeaponEnergyPistolDisabler
+  id: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
+  result: WeaponEnergySubMachineGunDisabler # Frontier: WeaponDisablerSMG<WeaponEnergySubMachineGunDisabler
   materials:
     Steel: 1000
     Glass: 500
@@ -89,8 +89,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyPistolLaserAdvanced
-  result: NFWeaponEnergyPistolLaserAdvanced
+  id: WeaponEnergyPistolLaserAdvanced
+  result: WeaponEnergyPistolLaserAdvanced
   materials:
     Steel: 1500
     Glass: 1000
@@ -98,8 +98,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyRifleSniperCannon
-  result: NFWeaponEnergyRifleSniperCannon
+  id: WeaponEnergyRifleSniperCannon
+  result: WeaponEnergyRifleSniperCannon
   materials:
     Steel: 1250
     Plastic: 750
@@ -107,7 +107,7 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyPistolLaserSvalinn
+  id: WeaponEnergyPistolLaserSvalinn
   result: WeaponLaserSvalinn
   materials:
     Steel: 2000
@@ -115,8 +115,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyRifleSniperXrayCannon
-  result: NFWeaponEnergyRifleSniperXrayCannon
+  id: WeaponEnergyRifleSniperXrayCannon
+  result: WeaponEnergyRifleSniperXrayCannon
   materials:
     Steel: 1500
     Glass: 500
@@ -125,8 +125,8 @@
 
 - type: latheRecipe
   parent: BaseWeaponRecipeLong
-  id: NFWeaponEnergyRifleTemperature
-  result: NFWeaponEnergyRifleTemperature
+  id: WeaponEnergyRifleTemperature
+  result: WeaponEnergyRifleTemperature
   materials:
     Steel: 2000
     Glass: 500
@@ -135,16 +135,16 @@
 
 # region Grenades
 - type: latheRecipe
-  id: NFMagazineGrenadeEmpty # Frontier: add NF prefix
-  result: NFMagazineGrenadeEmpty # Frontier: add NF prefix
+  id: MagazineGrenadeEmpty # Frontier: add  prefix
+  result: MagazineGrenadeEmpty # Frontier: add  prefix
   completetime: 3
   materials:
     Steel: 150
     Plastic: 50
 
 - type: latheRecipe
-  id: NFGrenadeEMP # Frontier: add NF prefix
-  result: NFGrenadeEMP # Frontier: add NF prefix
+  id: GrenadeEMP # Frontier: add  prefix
+  result: GrenadeEMP # Frontier: add  prefix
   completetime: 3
   materials:
     Steel: 150
@@ -152,8 +152,8 @@
     Glass: 20
 
 - type: latheRecipe
-  id: NFGrenadeBlast # Frontier: add NF prefix
-  result: NFGrenadeBlast # Frontier: add NF prefix
+  id: GrenadeBlast # Frontier: add  prefix
+  result: GrenadeBlast # Frontier: add  prefix
   completetime: 3
   materials:
     Steel: 450
@@ -161,8 +161,8 @@
     Gold: 150
 
 - type: latheRecipe
-  id: NFGrenadeFlash
-  result: NFGrenadeFlash
+  id: GrenadeFlash
+  result: GrenadeFlash
   completetime: 3
   materials:
     Steel: 150
@@ -183,64 +183,64 @@
 # region Upstream Removed
 - type: latheRecipe
   parent: Handcuffs
-  id: NFHandcuffs
+  id: Handcuffs
 
 - type: latheRecipe
   parent: Zipties
-  id: NFZipties
+  id: Zipties
 
 - type: latheRecipe
   parent: Stunbaton
-  id: NFStunbaton
+  id: Stunbaton
 
 - type: latheRecipe
   parent: Truncheon
-  id: NFTruncheon
+  id: Truncheon
 
 - type: latheRecipe
   parent: CombatKnife
-  id: NFCombatKnife
+  id: CombatKnife
 
 - type: latheRecipe
   parent: ClothingBackpackElectropack
-  id: NFClothingBackpackElectropack
+  id: ClothingBackpackElectropack
 
 - type: latheRecipe
   parent: ForensicPad
-  id: NFForensicPad
+  id: ForensicPad
 
 - type: latheRecipe
   parent: ClothingEyesHudSecurity
-  id: NFClothingEyesHudSecurity
+  id: ClothingEyesHudSecurity
 
 - type: latheRecipe
   parent: HoloprojectorSecurity
-  id: NFHoloprojectorSecurityEmpty
+  id: HoloprojectorSecurityEmpty
 
 - type: latheRecipe
   parent: RiotShield
-  id: NFRiotShield
+  id: RiotShield
 
 - type: latheRecipe
   parent: TelescopicShield
-  id: NFTelescopicShield
+  id: TelescopicShield
 
 - type: latheRecipe
   parent: Flash
-  id: NFFlash
+  id: Flash
 
 - type: latheRecipe
-  id: NFTargetHuman
+  id: TargetHuman
   result: TargetHuman
 
 - type: latheRecipe
   parent: TargetClown
-  id: NFTargetClown
+  id: TargetClown
 
 - type: latheRecipe
   parent: TargetSyndicate
-  id: NFTargetSyndicate
+  id: TargetSyndicate
 
 - type: latheRecipe
-  id: NFPortableRecharger
+  id: PortableRecharger
   parent: PortableRecharger

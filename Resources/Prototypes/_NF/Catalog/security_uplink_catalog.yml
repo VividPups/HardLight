@@ -148,7 +148,7 @@
   id: UplinkSecurityMk32
   name:  uplink-security-mk32-name
   description: uplink-security-mk32-desc
-  productEntity: NFWeaponPistolUniversalNfsd
+  productEntity: WeaponPistolUniversalNfsd
   icon: { sprite: _DV/Objects/Weapons/Guns/Pistols/universal.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 2
@@ -164,7 +164,7 @@
   id: UplinkSecurityDisabler
   name:  uplink-security-disabler-name
   description: uplink-security-disabler-desc
-  productEntity: NFWeaponEnergyPistolDisabler
+  productEntity: WeaponEnergyPistolDisabler
   icon: { sprite: Objects/Weapons/Guns/Battery/disabler.rsi, state: base }
   cost:
     FrontierUplinkCoin: 1
@@ -212,7 +212,7 @@
   id: UplinkSecurityEnforcer
   name:  uplink-security-enforcer-name
   description: uplink-security-enforcer-desc
-  productEntity: NFWeaponShotgunEnforcer
+  productEntity: WeaponShotgunEnforcer
   icon: { sprite: Objects/Weapons/Guns/Shotguns/enforcer.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 3
@@ -233,7 +233,7 @@
   id: UplinkSecurityLecter
   name:  uplink-security-lecter-name
   description: uplink-security-lecter-desc
-  productEntity: NFWeaponRifleAssaultLecter
+  productEntity: WeaponRifleAssaultLecter
   icon: { sprite: Objects/Weapons/Guns/Rifles/lecter.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 3
@@ -254,7 +254,7 @@
   id: UplinkSecurityVulcan
   name:  uplink-security-vulcan-name
   description: uplink-security-vulcan-desc
-  productEntity: NFWeaponRifleAssaultVulcan
+  productEntity: WeaponRifleAssaultVulcan
   icon: { sprite: _DV/Objects/Weapons/Guns/Rifles/vulcan.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 4
@@ -275,7 +275,7 @@
   id: UplinkSecurityLaserCarbine
   name:  uplink-security-lasercarbine-name
   description: uplink-security-lasercarbine-desc
-  productEntity: NFWeaponEnergyRifleCarbine
+  productEntity: WeaponEnergyRifleCarbine
   icon: { sprite: Objects/Weapons/Guns/Battery/laser_gun.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 8
@@ -296,7 +296,7 @@
   id: UplinkSecurityLaserCannon
   name:  uplink-security-lasercanon-name
   description: uplink-security-lasercanon-desc
-  productEntity: NFWeaponEnergyRifleSniperCannon
+  productEntity: WeaponEnergyRifleSniperCannon
   icon: { sprite: Objects/Weapons/Guns/Battery/laser_cannon.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 14
@@ -315,7 +315,7 @@
   id: UplinkSecurityDisablerSMG
   name:  uplink-security-disablersmg-name
   description: uplink-security-disablersmg-desc
-  productEntity: NFWeaponEnergySubMachineGunDisabler
+  productEntity: WeaponEnergySubMachineGunDisabler
   icon: { sprite: Objects/Weapons/Guns/Battery/disabler_smg.rsi, state: base }
   cost:
     FrontierUplinkCoin: 6
@@ -336,7 +336,7 @@
   id: UplinkSecurityWT550
   name:  uplink-security-wt550-name
   description: uplink-security-wt550-desc
-  productEntity: NFWeaponSubMachineGunWt550
+  productEntity: WeaponSubMachineGunWt550
   icon: { sprite: Objects/Weapons/Guns/SMGs/wt550.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 4
@@ -356,7 +356,7 @@
   id: UplinkSecurityEnergyGun
   name:  uplink-security-energygun-name
   description: uplink-security-energygun-desc
-  productEntity: NFWeaponEnergySubMachineGunDeltaV
+  productEntity: WeaponEnergySubMachineGunDeltaV
   icon: { sprite: _DV/Objects/Weapons/Guns/Battery/energygun.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 8
@@ -376,7 +376,7 @@
   id: UplinkSecurityEmpRpg
   name:  uplink-security-emprpg-name
   description: uplink-security-emprpg-desc
-  productEntity: NFWeaponLauncherRocketEmp
+  productEntity: WeaponLauncherRocketEmp
   icon: { sprite: Objects/Weapons/Guns/Launchers/rocket.rsi, state: base }
   cost:
     FrontierUplinkCoin: 5
@@ -751,7 +751,7 @@
   id: UplinkSecurityInspector
   name:  uplink-security-inspector-name
   description: uplink-security-inspector-desc
-  productEntity: NFWeaponRevolverInspector
+  productEntity: WeaponRevolverInspector
   icon: { sprite: Objects/Weapons/Guns/Revolvers/inspector.rsi, state: icon }
   cost:
     FrontierUplinkCoin: 1
