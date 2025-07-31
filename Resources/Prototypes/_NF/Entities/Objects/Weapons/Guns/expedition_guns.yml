@@ -66,13 +66,6 @@
   name: worn Mk32
 
 # Revolvers
-- type: entity
-  parent:
-  - BaseC2ExpeditionContraband
-  - WeaponRevolverArgenti
-  categories: [ HideSpawnMenu ]
-  id: WeaponRevolverArgentiExpedition
-  name: worn Argenti
 
 - type: entity
   parent:
