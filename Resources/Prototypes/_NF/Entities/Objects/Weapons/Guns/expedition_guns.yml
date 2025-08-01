@@ -240,7 +240,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier2
-  - WeaponEnergyPistolLaser
+  - NFWeaponEnergyPistolLaser
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergyPistolLaserExpedition
 
@@ -249,7 +249,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier3
-  - WeaponRifleAssaultLecter
+  - NFWeaponRifleAssaultLecter
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultLecterExpedition
   name: worn Lecter
@@ -257,7 +257,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier3Syndicate
-  - WeaponRifleAssaultM90GrenadeLauncher
+  - NFWeaponRifleAssaultM90GrenadeLauncher
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultM90GrenadeLauncherExpedition
   name: worn M90 rifle
@@ -335,7 +335,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier4Syndicate
-  - WeaponRifleAssaultSm
+  - NFWeaponRifleAssaultSm
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultSmExpedition
   name: worn SM rifle
