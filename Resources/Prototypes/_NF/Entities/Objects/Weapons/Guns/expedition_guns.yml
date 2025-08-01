@@ -194,9 +194,9 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier2
-  - WeaponRevolverWard45
+  - NFWeaponRevolverWard45
 #  categories: [ HideSpawnMenu ]
-  id: WeaponRevolverWard45Expedition
+  id: NFWeaponRevolverWard45Expedition
   name: worn Ward .45
 
 ## Shotguns
