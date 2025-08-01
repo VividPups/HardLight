@@ -143,7 +143,7 @@
   - BaseExpeditionWeaponTier1Syndicate
   - NFWeaponRevolverRitland45
 #  categories: [ HideSpawnMenu ]
-  id: NFWeaponRevolverRitland45Expedition
+  id: WeaponRevolverRitland45Expedition
   name: worn Ritland .45
 
 ## Rifles
@@ -196,7 +196,7 @@
   - BaseExpeditionWeaponTier2
   - NFWeaponRevolverWard45
 #  categories: [ HideSpawnMenu ]
-  id: NFWeaponRevolverWard45Expedition
+  id: WeaponRevolverWard45Expedition
   name: worn Ward .45
 
 ## Shotguns
@@ -221,7 +221,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier2
-  - WeaponRifleAssaultNovaliteC1
+  - NFWeaponRifleAssaultNovaliteC1
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultNovaliteC1Expedition
   name: worn Novalite C1
@@ -229,7 +229,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier2
-  - WeaponRifleAssaultGestio
+  - NFWeaponRifleAssaultGestio
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultGestioExpedition
   name: worn Gestio
