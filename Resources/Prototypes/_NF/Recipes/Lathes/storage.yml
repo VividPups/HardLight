@@ -2,7 +2,7 @@
 
 - type: latheRecipe
   abstract: true
-  id: BaseToolboxRecipe
+  id: NFBaseToolboxRecipe
   categories:
   - Storage
   completetime: 4
@@ -11,8 +11,8 @@
 
 - type: latheRecipe
   abstract: true
-  id: BaseBoxRecipe
-  parent: BaseToolboxRecipe
+  id: NFBaseBoxRecipe
+  parent: NFBaseToolboxRecipe
   completetime: 1
   applyMaterialDiscount: false
   materials:
@@ -23,38 +23,38 @@
 # Toolboxes
 - type: latheRecipe
   id: ToolboxArtistic
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: ToolboxArtistic
   name: lathe-recipe-ToolboxArtisticNF-name
 
 - type: latheRecipe
   id: ToolboxElectrical
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: ToolboxElectrical
   name: lathe-recipe-ToolboxElectricalNF-name
 
 - type: latheRecipe
   id: ToolboxMechanical
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: ToolboxMechanical
   name: lathe-recipe-ToolboxMechanicalNF-name
 
 - type: latheRecipe
   id: ToolboxEmergency
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: ToolboxEmergency
   name: lathe-recipe-ToolboxEmergencyNF-name
 
 # Weapon cases
 - type: latheRecipe
   id: WeaponCaseShort
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: WeaponCaseShort
   name: lathe-recipe-WeaponCaseShort-name
 
 - type: latheRecipe
   id: WeaponCaseLong
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: WeaponCaseLong
   name: lathe-recipe-WeaponCaseLong-name
   materials:
@@ -62,7 +62,7 @@
 
 - type: latheRecipe
   id: WeaponCaseHeavy
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: WeaponCaseHeavy
   name: lathe-recipe-WeaponCaseHeavy-name
   materials:
@@ -70,13 +70,13 @@
 
 - type: latheRecipe
   id: WeaponCaseShortAmmo
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: WeaponCaseShortAmmo
   name: lathe-recipe-WeaponCaseShortAmmo-name
 
 - type: latheRecipe
   id: WeaponCaseShortExplosives
-  parent: BaseToolboxRecipe
+  parent: NFBaseToolboxRecipe
   result: WeaponCaseShortExplosives
   name: lathe-recipe-WeaponCaseShortExplosives-name
 
