@@ -32,7 +32,7 @@
     Musket: 4294967295
     WeaponSniperRepeater: 4294967295
   # Assault Rifles
-    WeaponRifleAssaultSm: 4294967295
+    NFWeaponRifleAssaultSm: 4294967295
     WeaponRifleAssaultM90GrenadeLauncher: 4294967295
     WeaponRifleAssaultLecter: 4294967295
     WeaponRifleAssaultVulcan: 4294967295
