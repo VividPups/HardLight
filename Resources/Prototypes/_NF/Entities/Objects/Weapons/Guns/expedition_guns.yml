@@ -407,7 +407,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier5
-  - WeaponEnergySubMachineGunDeltaV
+  - NFWeaponEnergySubMachineGunDeltaV
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergySubMachineGunDeltaVExpedition
 
