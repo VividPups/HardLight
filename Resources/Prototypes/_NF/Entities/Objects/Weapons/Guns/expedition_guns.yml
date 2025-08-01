@@ -343,7 +343,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier4
-  - WeaponRifleAssaultVulcan
+  - NFWeaponRifleAssaultVulcan
 #  categories: [ HideSpawnMenu ]
   id: WeaponRifleAssaultVulcanExpedition
   name: worn Vulcan
@@ -352,7 +352,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier4
-  - WeaponEnergyRifleCarbine
+  - NFWeaponEnergyRifleCarbine
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergyRifleCarbineExpedition
 
@@ -366,7 +366,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier4
-  - WeaponEnergyPistolLaserAntique
+  - NFWeaponEnergyPistolLaserAntique
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergyPistolLaserAntiqueExpedition
 
@@ -414,7 +414,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier5
-  - WeaponEnergyRifleSniperXrayCannon
+  - NFWeaponEnergyRifleSniperXrayCannon
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergyRifleSniperXrayCannonExpedition
 
