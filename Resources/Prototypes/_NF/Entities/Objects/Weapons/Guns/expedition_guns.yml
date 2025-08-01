@@ -141,9 +141,9 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier1Syndicate
-  - WeaponRevolverRitland45
+  - NFWeaponRevolverRitland45
 #  categories: [ HideSpawnMenu ]
-  id: WeaponRevolverRitland45Expedition
+  id: NFWeaponRevolverRitland45Expedition
   name: worn Ritland .45
 
 ## Rifles
