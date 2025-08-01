@@ -73,7 +73,7 @@
     inhandVisuals: {} # FIXME: overwriting antique laser
 
 - type: entity
-  id: NFWeaponEnergyPistolLaserAdvanced
+  id: WeaponEnergyPistolLaserAdvanced
   parent: [ NFBaseWeaponEnergyPistolFireModes, NFBaseWeaponFrameEnergyPistolNanotrasen ]
   name: advanced laser pistol
   description: |-
