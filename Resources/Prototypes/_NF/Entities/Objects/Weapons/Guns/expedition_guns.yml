@@ -108,7 +108,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier1
-  - WeaponPistolPollockHighCapacityMag
+  - NFWeaponPistolPollockHighCapacityMag
 #  categories: [ HideSpawnMenu ]
   id: WeaponPistolPollockExpedition
   name: worn Pollock
