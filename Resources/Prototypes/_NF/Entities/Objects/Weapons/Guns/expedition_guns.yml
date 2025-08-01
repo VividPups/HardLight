@@ -421,7 +421,7 @@
 - type: entity
   parent:
   - BaseExpeditionWeaponTier5
-  - WeaponEnergyRifleSniperCannon
+  - NFWeaponEnergyRifleSniperCannon
 #  categories: [ HideSpawnMenu ]
   id: WeaponEnergyRifleSniperCannonExpedition
 
