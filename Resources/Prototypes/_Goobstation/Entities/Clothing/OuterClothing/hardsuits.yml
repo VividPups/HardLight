@@ -1,5 +1,5 @@
 - type: entity
-  parent: [ ClothingOuterHardsuitBase, BaseSyndicateContraband ]
+  parent: [ ClothingOuterHardsuitBase, BaseC3Contraband ]
   id: ClothingOuterHardsuitCybersunStealth
   # suffix: stealth - Harmony change
   name: cybersun stealth hardsuit
