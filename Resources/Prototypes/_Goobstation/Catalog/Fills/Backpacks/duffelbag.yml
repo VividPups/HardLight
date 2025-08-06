@@ -1,5 +1,18 @@
 - type: entity
   parent: ClothingBackpackDuffelSyndicateBundle
+  id: ClothingBackpackDuffelSyndicateStealthHardsuitBundle
+  name: cybersun stealthsuit bundle
+  description: "An advanced cybersun stealth hardsuit bundle."
+  components:
+  - type: StorageFill
+    contents:
+    - id: ClothingOuterHardsuitCybersunStealth
+    - id: ClothingMaskGasSyndicate
+    - id: ClothingHandsGlovesCombat
+    - id: DoubleEmergencyOxygenTankFilled
+    - id: DoubleEmergencyNitrogenTankFilled
+- type: entity
+  parent: ClothingBackpackDuffelSyndicateBundle
   id: ClothingBackpackDuffelSyndicateFilledWSPR
   name: WSPR bundle
   description: "A bundle carrying the syndicate's WSPR assault rifle, packed with 2 spare magazines."
