@@ -80,6 +80,10 @@
   components:
   - type: StaticPrice
     price: 17500 # worth the risk? #HL
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#E8D8B8" # Chalky white tint
   - type: Butcherable
     butcheringType: Knife
     spawned:
@@ -87,6 +91,7 @@
       amount: 1
     butcherSound:
       path: /Audio/Effects/packetrip.ogg
+    butcherDelay: 0.5
 
 ## START HL
 - type: entity
@@ -98,6 +103,10 @@
   components:
   - type: StaticPrice
     price: 5000 # worth the risk? #HL
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#D4A574" # Orange-rust tint
   - type: Butcherable
     butcheringType: Knife
     spawned:
@@ -105,6 +114,7 @@
       amount: 1
     butcherSound:
       path: /Audio/Effects/packetrip.ogg
+    butcherDelay: 0.5
 
 - type: entity
   parent: BaseWrappedPacket
@@ -115,6 +125,10 @@
   components:
   - type: StaticPrice
     price: 1500 # worth the risk? #HL
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#B8C8D4" # Blue tint
   - type: Butcherable
     butcheringType: Knife
     spawned:
@@ -122,6 +136,7 @@
       amount: 1
     butcherSound:
       path: /Audio/Effects/packetrip.ogg
+    butcherDelay: 0.5
 
 - type: entity
   parent: BaseWrappedPacket
@@ -132,6 +147,10 @@
   components:
   - type: StaticPrice
     price: 50000 # worth the risk? #HL
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#C8D474" # Volatile yellow-green tint
   - type: Butcherable
     butcheringType: Knife
     spawned:
@@ -139,6 +158,7 @@
       amount: 1
     butcherSound:
       path: /Audio/Effects/packetrip.ogg
+    butcherDelay: 0.5
 
 ## Opened Packet Entities
 - type: entity
@@ -150,6 +170,10 @@
   components:
   - type: StaticPrice
     price: 8750 # reduced value when opened
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#D4C0A0" # Chalky white + damage tint combined
   - type: SolutionContainerManager
     solutions:
       drink:
@@ -167,6 +191,10 @@
   components:
   - type: StaticPrice
     price: 2500
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#C49568" # Orange-rust + damage tint combined
   - type: SolutionContainerManager
     solutions:
       drink:
@@ -184,6 +212,10 @@
   components:
   - type: StaticPrice
     price: 750
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#A8B0BC" # Blue + damage tint combined
   - type: SolutionContainerManager
     solutions:
       drink:
@@ -201,6 +233,10 @@
   components:
   - type: StaticPrice
     price: 25000
+  - type: Sprite
+    sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi
+    state: brown_icon
+    color: "#B8C068" # Volatile yellow-green + damage tint combined
   - type: SolutionContainerManager
     solutions:
       drink:
