@@ -141,8 +141,8 @@ public partial class SharedBodySystem
                 // Otherwise we damage all parts equally (barotrauma, explosions, etc).
                 else if (damage != null)
                 {
-                    // Division by 2 cuz damaging all parts by the same damage by default is too much.
-                    damage /= 2;
+                    // Division by 10 cuz damaging all parts by the same damage by default is too much.
+                    damage /= 10;
                     targetPart = TargetBodyPart.All;
                 }
             }
