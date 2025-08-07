@@ -434,7 +434,7 @@ public partial class SharedBodySystem
     {
         return partType switch
         {
-            BodyPartType.Head => 0.5f, // 50% damage, necks are hard to cut
+            BodyPartType.Head => 0.2f, // 20% damage, necks are hard to cut
             BodyPartType.Torso => 1.0f, // 100% damage
             BodyPartType.Arm => 0.7f, // 70% damage
             BodyPartType.Hand => 0.7f, // 70% damage
