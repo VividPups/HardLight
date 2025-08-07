@@ -399,7 +399,7 @@
 
 # Grit / Injector fluid form
 # 'Amps you up' makes you aggressive, dulls pain. Makes you feel 'REALLY FUCKIN' GOOD MAN!!'
-# Adrenaline, Speed, jitters, chance to vomit, poison damage
+# Adrenaline, Speed, jitters, poison damage
 # Do not mix with other forms of Mindleaf, causes Grit to metabolize into Lexorin and metabolizes blood
 # Combine with Bake and Desoxyephedrine with Psicodine as a catalyst
 
@@ -491,11 +491,11 @@
         key: ForcedSleep
         time: 3
         type: Remove
-      - !type:ChemVomit
-        conditions:
-        - !type:ReagentThreshold
-          min: 1
-        probability: 0.1
+#      - !type:ChemVomit #HL
+#        conditions:
+#        - !type:ReagentThreshold
+#          min: 1
+#        probability: 0.1
       - !type:HealthChange
         conditions:
           - !type:ReagentThreshold
