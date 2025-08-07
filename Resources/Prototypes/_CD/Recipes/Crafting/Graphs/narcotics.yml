@@ -1,5 +1,5 @@
 - type: constructionGraph
-  id: WrappedBakePackage
+  id: WrappedDrugPackage
   start: start
   graph:
   - node: start
@@ -22,5 +22,41 @@
         reagent:
           ReagentId: Bake
         quantity: 30
+    - to: gritWrapped
+      steps:
+      - tool: Screwing
+        doAfter: 1
+      conditions:
+      - !type:MinSolution
+        solution: drink
+        reagent:
+          ReagentId: Grit
+        quantity: 30
+    - to: rustWrapped
+      steps:
+      - tool: Screwing
+        doAfter: 1
+      conditions:
+      - !type:MinSolution
+        solution: drink
+        reagent:
+          ReagentId: Rust
+        quantity: 30
+    - to: breakoutWrapped
+      steps:
+      - tool: Screwing
+        doAfter: 1
+      conditions:
+      - !type:MinSolution
+        solution: drink
+        reagent:
+          ReagentId: Breakout
+        quantity: 30
   - node: bakeWrapped
     entity: WrappedBakePackage
+  - node: gritWrapped
+    entity: WrappedGritPackage
+  - node: rustWrapped
+    entity: WrappedRustPackage
+  - node: breakoutWrapped
+    entity: WrappedBreakoutPackage
