@@ -1,11 +1,10 @@
-using Content.Shared.CD.Drugs;
+using Content.Shared._Hardlight.Drugs;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Chemistry.Reagent;
-using Content.Shared.FixedPoint;
 using Robust.Shared.Audio.Systems;
 
-namespace Content.Server.CD.Drugs;
+namespace Content.Server._Hardlight.Drugs;
 
 /// <summary>
 /// Server-side system that handles the actual packet transformation
@@ -43,14 +42,16 @@ public sealed class PacketSealingSystem : EntitySystem
         if (!_solution.TryGetSolution(ent.Owner, ent.Comp.SolutionName, out var solutionEnt, out var solution))
             return false;
 
-        // Check if any single reagent has enough quantity to seal
-        foreach (var reagent in solution.Contents)
-        {
-            if (reagent.Quantity >= ent.Comp.MinReagentAmount && GetWrappedPacketId(reagent.Reagent.Prototype) != null)
-                return true;
-        }
+        // Check if solution is at full capacity
+        if (solution.Volume < solution.MaxVolume)
+            return false;
 
-        return false;
+        // Check if it's a single valid drug
+        if (solution.Contents.Count != 1)
+            return false;
+
+        var reagent = solution.Contents[0];
+        return GetWrappedPacketId(reagent.Reagent.Prototype) != null;
     }
 
     private void SealPacket(Entity<PacketSealingComponent> ent, EntityUid user)
@@ -58,44 +59,22 @@ public sealed class PacketSealingSystem : EntitySystem
         if (!_solution.TryGetSolution(ent.Owner, ent.Comp.SolutionName, out var solutionEnt, out var solution))
             return;
 
-        // Find the primary reagent to determine packet type
-        var primaryReagent = GetPrimaryReagent(solution, ent.Comp.MinReagentAmount);
-        if (primaryReagent == null)
+        if (solution.Contents.Count != 1)
             return;
 
-        // Transform the empty packet into the appropriate wrapped packet
-        var wrappedPacketId = GetWrappedPacketId(primaryReagent);
+        var reagent = solution.Contents[0];
+        var wrappedPacketId = GetWrappedPacketId(reagent.Reagent.Prototype);
         if (wrappedPacketId == null)
             return;
 
         var wrappedPacket = Spawn(wrappedPacketId, Transform(ent.Owner).Coordinates);
         
-        // Play seal sound
+        // Play seal sound at the packet location for all players
         if (ent.Comp.SealSound != null)
             _audio.PlayPvs(ent.Comp.SealSound, ent.Owner);
 
         // Remove the empty packet
         Del(ent.Owner);
-    }
-
-    private string? GetPrimaryReagent(Solution solution, FixedPoint2 minQuantity)
-    {
-        string? primaryReagent = null;
-        var highestQuantity = FixedPoint2.Zero;
-
-        foreach (var reagent in solution.Contents)
-        {
-            // Only consider reagents that meet minimum quantity and are valid drugs
-            if (reagent.Quantity >= minQuantity && 
-                reagent.Quantity > highestQuantity && 
-                GetWrappedPacketId(reagent.Reagent.Prototype) != null)
-            {
-                highestQuantity = reagent.Quantity;
-                primaryReagent = reagent.Reagent.Prototype;
-            }
-        }
-
-        return primaryReagent;
     }
 
     private string? GetWrappedPacketId(string reagentId)

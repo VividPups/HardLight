@@ -4,7 +4,7 @@ using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
-namespace Content.Shared.CD.Drugs;
+namespace Content.Shared._Hardlight.Drugs;
 
 /// <summary>
 /// Component that allows packets to be sealed by right-clicking when they contain reagents
@@ -26,12 +26,6 @@ public sealed partial class PacketSealingComponent : Component
     /// </summary>
     [DataField, ViewVariables]
     public SoundPathSpecifier? SealSound = new SoundPathSpecifier("/Audio/Effects/packetrip.ogg");
-
-    /// <summary>
-    /// Minimum amount of reagent required to seal a packet
-    /// </summary>
-    [DataField]
-    public FixedPoint2 MinReagentAmount = 30;
 
     /// <summary>
     /// The solution container name to check for reagents
