@@ -89,8 +89,8 @@
     spawned:
     - id: OpenedBakePacket
       amount: 1
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
     butcherDelay: 0.5
 
 ## START HL
@@ -112,8 +112,8 @@
     spawned:
     - id: OpenedRustPacket
       amount: 1
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
     butcherDelay: 0.5
 
 - type: entity
@@ -134,8 +134,8 @@
     spawned:
     - id: OpenedBreakoutPacket
       amount: 1
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
     butcherDelay: 0.5
 
 - type: entity
@@ -156,8 +156,8 @@
     spawned:
     - id: OpenedGritPacket
       amount: 1
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
     butcherDelay: 0.5
 
 ## Opened Packet Entities
