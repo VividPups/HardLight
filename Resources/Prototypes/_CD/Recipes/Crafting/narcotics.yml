@@ -1,3 +1,5 @@
+
+
 - type: construction
   name: wrapped bake package
   id: wrappedBakePackage
@@ -6,6 +8,39 @@
   targetNode: bakeWrapped
   category: construction-category-misc
   description: "Wrap up a packet of Bake for export."
+  icon: { sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi, state: brown_icon }
+  objectType: Item
+
+- type: construction
+  name: wrapped grit package
+  id: wrappedGritPackage
+  graph: WrappedGritPackage
+  startNode: start
+  targetNode: gritWrapped
+  category: construction-category-misc
+  description: "Wrap up a packet of Grit for export."
+  icon: { sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi, state: brown_icon }
+  objectType: Item
+
+- type: construction
+  name: wrapped rust package
+  id: wrappedRustPackage
+  graph: WrappedRustPackage
+  startNode: start
+  targetNode: rustWrapped
+  category: construction-category-misc
+  description: "Wrap up a packet of Rust for export."
+  icon: { sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi, state: brown_icon }
+  objectType: Item
+
+- type: construction
+  name: wrapped breakout package
+  id: wrappedBreakoutPackage
+  graph: WrappedBreakoutPackage
+  startNode: start
+  targetNode: breakoutWrapped
+  category: construction-category-misc
+  description: "Wrap up a packet of Breakout for export."
   icon: { sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi, state: brown_icon }
   objectType: Item
 
