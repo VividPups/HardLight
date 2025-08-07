@@ -13,8 +13,15 @@ public sealed partial class ShuttleDeedComponent : Component
     public const int MaxNameLength = 30;
     public const int MaxSuffixLength = 3 + 1 + 4; // 3 digits, dash, up to 4 letters - should be enough
 
+
     [DataField, AutoNetworkedField]
     public EntityUid? ShuttleUid = null;
+
+    /// <summary>
+    /// Persistent unique identifier for this deed, used for cache and cross-round tracking.
+    /// </summary>
+    [DataField]
+    public Guid DeedGuid = Guid.Empty;
 
     [DataField, AutoNetworkedField]
     public string? ShuttleName = "Unknown";
