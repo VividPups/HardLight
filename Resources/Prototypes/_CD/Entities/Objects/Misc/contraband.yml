@@ -90,8 +90,8 @@
     - id: OpenedBakePacket
       amount: 1
     butcherDelay: 0.5
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
 
 ## START HL
 - type: entity
@@ -113,8 +113,8 @@
     - id: OpenedRustPacket
       amount: 1
     butcherDelay: 0.5
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
 
 - type: entity
   parent: BaseWrappedPacket
@@ -135,8 +135,8 @@
     - id: OpenedBreakoutPacket
       amount: 1
     butcherDelay: 0.5
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
 
 - type: entity
   parent: BaseWrappedPacket
@@ -157,8 +157,8 @@
     - id: OpenedGritPacket
       amount: 1
     butcherDelay: 0.5
-    butcherSound:
-      path: /Audio/Effects/packetrip.ogg
+#    butcherSound:
+#      path: /Audio/Effects/packetrip.ogg
 
 ## Opened Packet Entities
 - type: entity
