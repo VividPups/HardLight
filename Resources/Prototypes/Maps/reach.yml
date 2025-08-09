@@ -8,11 +8,12 @@
     Reach:
       stationProto: StandardNanotrasenStation
       components:
+        - type: TransferableStation
         - type: StationNameSetup
-          mapNameTemplate: 'Hardlight Station'
-          # nameGenerator:
-            # !type:NanotrasenNameGenerator
-            # prefixCreator: 'SC'
+          mapNameTemplate: '{0} Reach Transport {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: 'SC'
         - type: StationEmergencyShuttle
           emergencyShuttlePath: /Maps/Shuttles/emergency.yml
         - type: StationJobs
