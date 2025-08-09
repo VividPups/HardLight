@@ -17,7 +17,6 @@ using Content.Shared._NF.Shipyard.Events;
 using Content.Shared.Mobs.Components;
 using Robust.Shared.Containers;
 using Content.Server._NF.Station.Components;
-using Content.Server._NF.Shipyard.Systems;
 using Robust.Shared.EntitySerialization.Systems;
 using Robust.Shared.Utility;
 
@@ -71,9 +70,6 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         _configManager.OnValueChanged(NFCCVars.ShipyardSellRate, SetShipyardSellRate, true);
         _sawmill = Logger.GetSawmill("shipyard");
 
-        // Load persistent ship cache
-        ShipyardPersistentCache.Load();
-
         SubscribeLocalEvent<ShipyardConsoleComponent, ComponentStartup>(OnShipyardStartup);
         SubscribeLocalEvent<ShipyardConsoleComponent, BoundUIOpenedEvent>(OnConsoleUIOpened);
         SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsoleSellMessage>(OnSellMessage);
@@ -87,9 +83,6 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     {
         _configManager.UnsubValueChanged(NFCCVars.Shipyard, SetShipyardEnabled);
         _configManager.UnsubValueChanged(NFCCVars.ShipyardSellRate, SetShipyardSellRate);
-
-        // Save persistent ship cache
-        ShipyardPersistentCache.Save();
     }
     private void OnShipyardStartup(EntityUid uid, ShipyardConsoleComponent component, ComponentStartup args)
     {
