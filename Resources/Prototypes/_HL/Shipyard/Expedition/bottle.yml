@@ -1,0 +1,43 @@
+# Author Info
+# GitHub: 
+# Discord: trylobyte
+
+# Maintainer Info
+# GitHub: 
+# Discord: trylobyte
+# Shuttle Notes:
+#
+- type: vessel
+  id: Bottle
+  parent: BaseVessel
+  name: JDB Bottle
+  description: Custom-made for ColComm and licensed through the Jell Design Bureau, this fast and low-cost atmospheric harvester is frequently repurposed by mercenaries on a budget.
+  price: 42500 # ~37000 on mapinit + roughly 15% markup
+  category: Small
+  group: Expedition
+  shuttlePath: /Maps/_HL/Shuttles/Expedition/bottle.yml
+  guidebookPage: 
+  class:
+  - Expedition
+  engine:
+  - Uranium
+
+- type: gameMap
+  id: Bottle
+  mapName: 'Bottle'
+  mapPath: /Maps/_HL/Shuttles/Expedition/bottle.yml
+  minPlayers: 0
+  stations: 
+    Bottle:
+      stationProto: StandardFrontierExpeditionVessel
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: 'Bottle {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationJobs
+          availableJobs:
+            Contractor: [ 0, 0 ]
+            Pilot: [ 0, 0 ]
+            Mercenary: [ 0, 0 ]

@@ -1,0 +1,22 @@
+<Document>
+  # BOTTLE-CLASS ATMOSPHERIC HARVESTER
+
+    [color=#a4885c]Ship Size:[/color] Small
+
+	[color=#a4885c]Recommended Crew:[/color] 1-2
+
+	[color=#a4885c]Power Gen Type:[/color] Uranium
+
+	[color=#a4885c]Expeditions:[/color] Yes
+
+	[color=#a4885c]IFF Console:[/color] None
+
+  "The Bottle is a cheap and cheerful atmospheric harvester, a joint effort between Harrington Research and the Jell Design Bureau to break into the colonial market. Surprisingly speedy and maneuverable, this ship is made to quickly respond to spacing incidents and repressurize vessels once they're sealed and supply rarer gases to scientific endeavors in remote areas."
+
+  # Tips on running JDB Bottle shuttles
+  - The typical power load for the shuttle at time of purchase is 33 [bold]kW[/bold] spread across 2 generators.  Reducing both to 18 [bold]kW[/bold] is recommended for fuel efficiency. For more general info on the power grid, see the guidebook article [textlink="Power" link="Power"].
+  - The shuttle comes with necessary equipment for Offshore Gas Mining. To learn the basics, see the guidebook article [textlink="Offshore Gas Mining" link="OffshoreGasMining"].
+  - For more general info on atmospherics see the guidebook article about [textlink="Atmospherics" link="Atmospherics"].
+  - For basics of shuttle piloting see [textlink="Piloting" link="Piloting"].
+
+</Document>
