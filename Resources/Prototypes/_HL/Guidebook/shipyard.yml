@@ -1,0 +1,13 @@
+- type: guideEntry
+  id: Hardlight Shipyard
+  name: "Hardlight Shipyards"
+  text: "/ServerInfo/_HL/Guidebook/Shipyard.xml"
+  priority: 7
+  children:
+  - ShipyardBottle
+  
+- type: guideEntry
+  id: ShipyardBottle
+  name: "JDB Bottle"
+  text: "/ServerInfo/_HL/Guidebook/Shipyard/Bottle.xml"
+  
