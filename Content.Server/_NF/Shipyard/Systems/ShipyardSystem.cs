@@ -120,9 +120,17 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     /// <param name="stationUid">The ID of the station to dock the shuttle to</param>
     /// <param name="shuttlePath">The path to the shuttle file to load. Must be a grid file!</param>
     /// <param name="shuttleEntityUid">The EntityUid of the shuttle that was purchased</param>
-    public bool TryPurchaseShuttle(EntityUid stationUid, ResPath shuttlePath, [NotNullWhen(true)] out EntityUid? shuttleEntityUid)
+    /// <summary>
+    /// Purchases a shuttle and docks it to the grid the console is on, independent of station data.
+    /// </summary>
+    /// <param name="consoleUid">The entity of the shipyard console to dock to its grid</param>
+    /// <param name="shuttlePath">The path to the shuttle file to load. Must be a grid file!</param>
+    /// <param name="shuttleEntityUid">The EntityUid of the shuttle that was purchased</param>
+    public bool TryPurchaseShuttle(EntityUid consoleUid, ResPath shuttlePath, [NotNullWhen(true)] out EntityUid? shuttleEntityUid)
     {
-        if (!TryComp<StationDataComponent>(stationUid, out var stationData)
+        // Get the grid the console is on
+        if (!TryComp<TransformComponent>(consoleUid, out var consoleXform)
+            || consoleXform.GridUid == null
             || !TryAddShuttle(shuttlePath, out var shuttleGrid)
             || !TryComp<ShuttleComponent>(shuttleGrid, out var shuttleComponent))
         {
@@ -131,19 +139,10 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         }
 
         var price = _pricing.AppraiseGrid(shuttleGrid.Value, null);
-        var targetGrid = _station.GetLargestGrid(stationData);
+        var targetGrid = consoleXform.GridUid.Value;
 
-
-        if (targetGrid == null) //how are we even here with no station grid
-        {
-            QueueDel(shuttleGrid);
-            shuttleEntityUid = null;
-            return false;
-        }
-
-        _sawmill.Info($"Shuttle {shuttlePath} was purchased at {ToPrettyString(stationUid)} for {price:f2}");
-        //can do TryFTLDock later instead if we need to keep the shipyard map paused
-        _shuttle.TryFTLDock(shuttleGrid.Value, shuttleComponent, targetGrid.Value);
+        _sawmill.Info($"Shuttle {shuttlePath} was purchased at {ToPrettyString(consoleUid)} for {price:f2}");
+        _shuttle.TryFTLDock(shuttleGrid.Value, shuttleComponent, targetGrid);
         shuttleEntityUid = shuttleGrid;
         return true;
     }
@@ -178,29 +177,29 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     /// <param name="stationUid">The ID of the station that the shuttle is docked to</param>
     /// <param name="shuttleUid">The grid ID of the shuttle to be appraised and sold</param>
     /// <param name="consoleUid">The ID of the console being used to sell the ship</param>
-    public ShipyardSaleResult TrySellShuttle(EntityUid stationUid, EntityUid shuttleUid, EntityUid consoleUid, out int bill)
+    /// <summary>
+    /// Sells a shuttle, checking that it is docked to the grid the console is on, and not to a station.
+    /// </summary>
+    /// <param name="shuttleUid">The grid ID of the shuttle to be appraised and sold</param>
+    /// <param name="consoleUid">The ID of the console being used to sell the ship</param>
+    /// <param name="bill">The amount the shuttle is sold for</param>
+    public ShipyardSaleResult TrySellShuttle(EntityUid shuttleUid, EntityUid consoleUid, out int bill)
     {
         ShipyardSaleResult result = new ShipyardSaleResult();
         bill = 0;
 
-        if (!TryComp<StationDataComponent>(stationUid, out var stationGrid)
-            || !HasComp<ShuttleComponent>(shuttleUid)
+        if (!HasComp<ShuttleComponent>(shuttleUid)
             || !TryComp(shuttleUid, out TransformComponent? xform)
+            || !TryComp<TransformComponent>(consoleUid, out var consoleXform)
+            || consoleXform.GridUid == null
             || ShipyardMap == null)
         {
             result.Error = ShipyardSaleError.InvalidShip;
             return result;
         }
 
-        var targetGrid = _station.GetLargestGrid(stationGrid);
-
-        if (targetGrid == null)
-        {
-            result.Error = ShipyardSaleError.InvalidShip;
-            return result;
-        }
-
-        var gridDocks = _docking.GetDocks(targetGrid.Value);
+        var targetGrid = consoleXform.GridUid.Value;
+        var gridDocks = _docking.GetDocks(targetGrid);
         var shuttleDocks = _docking.GetDocks(shuttleUid);
         var isDocked = false;
 
@@ -220,7 +219,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
         if (!isDocked)
         {
-            _sawmill.Warning($"shuttle is not docked to that station");
+            _sawmill.Warning($"shuttle is not docked to the console's grid");
             result.Error = ShipyardSaleError.Undocked;
             return result;
         }
@@ -235,13 +234,6 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             result.Error = ShipyardSaleError.OrganicsAboard;
             result.OrganicName = charName;
             return result;
-        }
-
-        //just yeet and delete for now. Might want to split it into another function later to send back to the shipyard map first to pause for something
-        //also superman 3 moment
-        if (_station.GetOwningStation(shuttleUid) is { Valid: true } shuttleStationUid)
-        {
-            _station.DeleteStation(shuttleStationUid);
         }
 
         if (TryComp<ShipyardConsoleComponent>(consoleUid, out var comp))
