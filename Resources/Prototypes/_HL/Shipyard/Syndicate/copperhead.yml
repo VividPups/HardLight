@@ -1,22 +1,22 @@
 # Author Info
-# GitHub: Tych0theSynth
-# Discord: Tych0
+# GitHub: Sophia12434
+# Discord: Rusnt
 
 # Maintainer Info
-# GitHub: Tych0theSynth
-# Discord: Tych0
+# GitHub: Sophia12434
+# Discord: Rusnt
 
 # Shuttle Notes:
 #
 - type: vessel
-  id: copperhead
+  id: Copperhead
   parent: BaseVesselAntag
   name: Copperhead
   description: "An old model of patrol boat, modernized to fit new Syndicate standards."
   price: 100000 #Appraises at ~19000. It's a smuggling ship. Of course it's going to be hella expensive due to the profit potential.
   category: Medium
   group: Syndicate
-  shuttlePath: /Maps/_HL/Shuttles/Syndicate/swordfishf.yml
+  shuttlePath: /Maps/_HL/Shuttles/Syndicate/Copperhead.yml
   guidebookPage: Null
   class:
   - Syndicate
@@ -24,12 +24,12 @@
   - Uranium
 
 - type: gameMap
-  id: copperhead
+  id: Copperhead
   mapName: 'Copperhead'
-  mapPath: /Maps/_HL/Shuttles/Syndicate/swordfishf.yml
+  mapPath: /Maps/_HL/Shuttles/Syndicate/Copperhead.yml
   minPlayers: 0
   stations:
-    Swordfish-F:
+    Copperhead:
       stationProto: StandardFrontierVessel
       components:
         - type: StationNameSetup
@@ -38,4 +38,7 @@
             !type:NanotrasenNameGenerator
             prefixCreator: '14'
         - type: StationJobs
-          availableJobs: {}
+          availableJobs:
+            Contractor: [ 0, 0 ]
+            Pilot: [ 0, 0 ]
+            Mercenary: [ 0, 0 ]
