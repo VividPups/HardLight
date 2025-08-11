@@ -18,9 +18,9 @@
   suffix: black
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexblack.rsi
+    sprite: _HL/Clothing/UnderClothing/latexblack.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexblack.rsi
+    sprite: _HL/Clothing/UnderClothing/latexblack.rsi
 
 - type: entity
   parent: BodysuitBase
@@ -28,9 +28,9 @@
   suffix: blue
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexblue.rsi
+    sprite: _HL/Clothing/UnderClothing/latexblue.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexblue.rsi
+    sprite: _HL/Clothing/UnderClothing/latexblue.rsi
 
 - type: entity
   parent: BodysuitBase
@@ -38,9 +38,9 @@
   suffix: white
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexwhite.rsi
+    sprite: _HL/Clothing/UnderClothing/latexwhite.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexwhite.rsi
+    sprite: _HL/Clothing/UnderClothing/latexwhite.rsi
 
 - type: entity
   parent: BodysuitBase
@@ -48,9 +48,9 @@
   suffix: purple
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexpurple.rsi
+    sprite: _HL/Clothing/UnderClothing/latexpurple.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexpurple.rsi
+    sprite: _HL/Clothing/UnderClothing/latexpurple.rsi
 
 - type: entity
   parent: BodysuitBase
@@ -58,9 +58,9 @@
   suffix: yellow
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexyellow.rsi
+    sprite: _HL/Clothing/UnderClothing/latexyellow.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexyellow.rsi
+    sprite: _HL/Clothing/UnderClothing/latexyellow.rsi
 
 - type: entity
   parent: BodysuitBase
@@ -68,6 +68,6 @@
   suffix: red
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Underclothing/latexred.rsi
+    sprite: _HL/Clothing/UnderClothing/latexred.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Underclothing/latexred.rsi
+    sprite: _HL/Clothing/UnderClothing/latexred.rsi
