@@ -1,0 +1,87 @@
+﻿- type: entity
+  parent: ClothingUniformBase
+  id: ClothingUniformFiresuitCroptop
+  name: responder's respite (fire)
+  description: A comfortable and airy crop top to be worn underneath protective clothing before, during and after emergencies.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/firesuitcrop.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/firesuitcrop.rsi
+
+- type: entity
+  parent: ClothingUniformBase
+  id: ClothingUniformFiresuitAtmosCroptop
+  name: responder's respite (atmospherics)
+  description: A comfortable and airy crop top to be worn underneath protective clothing before, during and after emergencies. This one is in atmosian blue.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/firesuitcropatmos.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/firesuitcropatmos.rsi
+
+- type: entity
+  parent: ClothingUniformBase
+  id: ClothingUniformKi
+  name: ki's uniform
+  suffix: admin spawn only
+  description: A sweet smelling bodysuit.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/kiuniform.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/kiuniform.rsi
+  - type: Armor
+    modifiers:
+      coefficients:
+        Blunt: 0.75
+        Slash: 0.75
+        Piercing: 0.75
+
+- type: entity
+  parent: ClothingShoesBase
+  id: ClothingShoesKi
+  name: ki's boots
+  suffix: admin spawn only
+  description: A pair of sweet smelling boots.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/kiuniformextra.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/kiuniformextra.rsi
+
+- type: entity
+  parent: ClothingUniformBase
+  id: ClothingUniformVenom
+  name: venom's uniform
+  suffix: admin spawn only
+  description: A sharp smelling bodysuit.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/venomuniform.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/venomuniform.rsi
+  - type: Armor
+    modifiers:
+      coefficients:
+        Blunt: 0.75
+        Slash: 0.75
+        Piercing: 0.75
+
+- type: entity
+  parent: ClothingUniformBase
+  id: ClothingUniformNox
+  name: nox's uniform
+  suffix: admin spawn only
+  description: An odorless bodysuit.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/noxuniform.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/noxuniform.rsi
+  - type: Armor
+    modifiers:
+      coefficients:
+        Blunt: 0.75
+        Slash: 0.75
+        Piercing: 0.75

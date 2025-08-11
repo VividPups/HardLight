@@ -73,6 +73,16 @@
             32:
               sprite: Floof/Mobs/Species/Resomi/displacement.rsi
               state: jumpsuit
+        accessory1:
+          sizeMaps:
+            32:
+              sprite: Floof/Mobs/Species/Resomi/displacement.rsi
+              state: jumpsuit
+        accessory2:
+          sizeMaps:
+            32:
+              sprite: Floof/Mobs/Species/Resomi/displacement.rsi
+              state: jumpsuit
         eyes:
           sizeMaps:
             32:
