@@ -103,38 +103,32 @@ namespace Content.Server.Research.Systems
         {
             var allServers = EntityQueryEnumerator<ResearchServerComponent>();
             var list = new List<string>();
-            var station = _station.GetOwningStation(gridUid);
+            if (!EntityManager.TryGetComponent(gridUid, out TransformComponent? gridXform) || gridXform.GridUid == null)
+                return list.ToArray();
 
-            if (station is { } stationUid)
+            var targetGrid = gridXform.GridUid.Value;
+            while (allServers.MoveNext(out var uid, out var comp))
             {
-                while (allServers.MoveNext(out var uid, out var comp))
-                {
-                    if (_station.GetOwningStation(uid) == stationUid)
-                        list.Add(comp.ServerName);
-                }
+                if (EntityManager.TryGetComponent(uid, out TransformComponent? serverXform) && serverXform.GridUid == targetGrid)
+                    list.Add(comp.ServerName);
             }
-
-            var serverList = list.ToArray();
-            return serverList;
+            return list.ToArray();
         }
 
         public int[] GetNFServerIds(EntityUid gridUid)
         {
             var allServers = EntityQueryEnumerator<ResearchServerComponent>();
             var list = new List<int>();
-            var station = _station.GetOwningStation(gridUid);
+            if (!EntityManager.TryGetComponent(gridUid, out TransformComponent? gridXform) || gridXform.GridUid == null)
+                return list.ToArray();
 
-            if (station is { } stationUid)
+            var targetGrid = gridXform.GridUid.Value;
+            while (allServers.MoveNext(out var uid, out var comp))
             {
-                while (allServers.MoveNext(out var uid, out var comp))
-                {
-                    if (_station.GetOwningStation(uid) == stationUid)
-                        list.Add(comp.Id);
-                }
+                if (EntityManager.TryGetComponent(uid, out TransformComponent? serverXform) && serverXform.GridUid == targetGrid)
+                    list.Add(comp.Id);
             }
-
-            var serverList = list.ToArray();
-            return serverList;
+            return list.ToArray();
         }
 
         public override void Update(float frameTime)

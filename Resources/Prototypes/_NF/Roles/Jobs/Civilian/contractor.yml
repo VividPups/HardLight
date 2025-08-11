@@ -6,6 +6,8 @@
   icon: "JobIconContractor"
   supervisors: job-supervisors-hire
   displayWeight: 40 # Top
+  access:
+  - Captain
   accessGroups:
   - GeneralAccess
   special:

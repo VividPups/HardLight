@@ -1,3 +1,4 @@
+using Content.Shared.Salvage.Expeditions;
 using Content.Server.Radio.EntitySystems;
 using Content.Shared.Radio;
 using Content.Shared.Salvage;
@@ -17,6 +18,7 @@ using Robust.Shared.Audio.Systems;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Timing;
 using Content.Shared.Labels.EntitySystems;
+using Content.Server.GameTicking;
 using Robust.Shared.EntitySerialization.Systems;
 
 namespace Content.Server.Salvage
@@ -57,6 +59,22 @@ namespace Content.Server.Salvage
             InitializeExpeditions();
             InitializeMagnet();
             InitializeRunner();
+
+            // Subscribe to round start event to update expedition consoles
+            SubscribeLocalEvent<GameRunLevelChangedEvent>(OnGameRunLevelChanged);
+        }
+
+        private void OnGameRunLevelChanged(GameRunLevelChangedEvent ev)
+        {
+            // Only update on round start
+            if (ev.New == GameRunLevel.InRound)
+            {
+                var query = AllEntityQuery<SalvageExpeditionDataComponent, MetaDataComponent>();
+                while (query.MoveNext(out var ent, out _, out _))
+                {
+                    UpdateConsoles((ent, Comp<SalvageExpeditionDataComponent>(ent)));
+                }
+            }
         }
 
         private void Report(EntityUid source, string channelName, string messageKey, params (string, object)[] args)

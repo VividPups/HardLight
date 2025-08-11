@@ -1,0 +1,12 @@
+# Individual drug packaging recipes removed - EmptyPacket now uses verb-based packaging
+
+- type: construction
+  name: folded smuggling packet
+  id: FoldSmugglerPackage
+  graph: FoldSmugglerPackage
+  startNode: start
+  targetNode: emptyPacket
+  category: construction-category-misc
+  description: "Fold a packet to smuggle narcotics"
+  icon: { sprite: _CD/Objects/Misc/Contraband/drug_packets.rsi, state: brown_icon }
+  objectType: Item
