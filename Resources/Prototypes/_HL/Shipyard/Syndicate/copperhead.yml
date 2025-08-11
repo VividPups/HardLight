@@ -12,7 +12,7 @@
   id: copperhead
   parent: BaseVesselAntag
   name: Copperhead
-  description: "An old model of patrol boat, modernized to fit new Syndicate standards
+  description: "An old model of patrol boat, modernized to fit new Syndicate standards."
   price: 100000 #Appraises at ~19000. It's a smuggling ship. Of course it's going to be hella expensive due to the profit potential.
   category: Medium
   group: Syndicate
