@@ -64,6 +64,9 @@
         {
             "name": "gasbender"
         },
+		{
+            "name": "gondola"
+        },
         {
             "name": "harbormaster"
         },
@@ -137,7 +140,7 @@
             "name": "vagabond"
         },
         {
-      "name": "phantom"
+            "name": "phantom"
         },
         {
             "name": "nook"
