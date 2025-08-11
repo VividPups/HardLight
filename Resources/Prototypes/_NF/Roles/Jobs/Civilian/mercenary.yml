@@ -13,6 +13,7 @@
   displayWeight: 20 # Second from the bottom
   access:
   - Mercenary
+  - Captain
   accessGroups:
   - GeneralAccess
   special:
