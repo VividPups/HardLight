@@ -593,6 +593,7 @@
       - Sheet
       - RawMaterial
       - Ingot
+  - type: OreSiloClient
 
 - type: entity
   id: Biogenerator
@@ -794,6 +795,7 @@
       - RawMaterial
       - Plastic
       - Ingot # Frontier
+  - type: OreSiloClient
 
 # Shitmed Change Start
 - type: entity

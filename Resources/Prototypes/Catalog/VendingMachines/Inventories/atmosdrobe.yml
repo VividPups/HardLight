@@ -15,5 +15,6 @@
     ClothingOuterWinterAtmos: 2
     ClothingNeckScarfStripedLightBlue: 3
     ClothingShoesBootsWinterAtmos: 2 #Delta V: Add departmental winter boots
+    ClothingUniformFiresuitAtmosCroptop: 2 # Hardlight
   contrabandInventory:
     ToyFigurineAtmosTech: 1

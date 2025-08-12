@@ -1,0 +1,73 @@
+- type: entity
+  parent: Clothing
+  id: BodysuitBase
+  abstract: true
+  name: latex bodysuit
+  description: This leaves nothing to the imagination.
+  components:
+  - type: Sprite
+    state: icon
+  - type: Clothing
+    slots: [ACCESSORY, ACCESSORYALT]
+    equipSound:
+      path: /Audio/Items/jumpsuit_equip.ogg
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitBlack
+  suffix: black
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexblack.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexblack.rsi
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitBlue
+  suffix: blue
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexblue.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexblue.rsi
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitWhite
+  suffix: white
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexwhite.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexwhite.rsi
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitPurple
+  suffix: purple
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexpurple.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexpurple.rsi
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitYellow
+  suffix: yellow
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexyellow.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexyellow.rsi
+
+- type: entity
+  parent: BodysuitBase
+  id: LatexSuitRed
+  suffix: red
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/latexred.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/latexred.rsi

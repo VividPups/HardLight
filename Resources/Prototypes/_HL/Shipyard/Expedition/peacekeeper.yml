@@ -1,0 +1,43 @@
+# Author Info
+# GitHub: Alkashy-Dev
+# Discord: commandoboris
+
+# Maintainer Info
+# GitHub: Alkashy-Dev
+# Discord: commandoboris
+# Shuttle Notes:
+#
+- type: vessel
+  id: Peacekeeper
+  parent: BaseVessel
+  name: SCC Peacekeeper
+  description: A fairly old, yet reliable ship, formally issued to Peacekeepers involved in cross-corporate skirmishes. Its built to have everything a group of 3-4 might need to stay alive and relatively happy if such conflicts were to drag on for a while. 
+  price: 90000 # ~70000 on mapinit + roughly 30% markup
+  category: Medium
+  group: Expedition
+  shuttlePath: /Maps/_HL/Shuttles/Expedition/peacekeeper.yml
+  guidebookPage:
+  class:
+  - Expedition
+  engine:
+  - Uranium
+
+- type: gameMap
+  id: Peacekeeper
+  mapName: 'Peacekeeper'
+  mapPath: /Maps/_HL/Shuttles/Expedition/peacekeeper.yml
+  minPlayers: 0
+  stations: 
+    Peacekeeper:
+      stationProto: StandardFrontierExpeditionVessel
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: 'Peacekeeper {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationJobs
+          availableJobs:
+            Contractor: [ 0, 0 ]
+            Pilot: [ 0, 0 ]
+            Mercenary: [ 0, 0 ]
