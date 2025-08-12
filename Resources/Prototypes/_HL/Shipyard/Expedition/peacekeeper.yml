@@ -16,7 +16,7 @@
   category: Medium
   group: Expedition
   shuttlePath: /Maps/_HL/Shuttles/Expedition/peacekeeper.yml
-  guidebookPage: ShipyardPeacekeeper
+  guidebookPage:
   class:
   - Expedition
   engine:
