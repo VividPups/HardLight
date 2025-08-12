@@ -4,7 +4,7 @@
   id: ClothingUniformBaseThongs
   components:
   - type: Clothing
-    slots: [accessory, accessoryalt]
+    slots: [innerclothing, accessory, accessoryalt]
 
 #Command Outfits
 #

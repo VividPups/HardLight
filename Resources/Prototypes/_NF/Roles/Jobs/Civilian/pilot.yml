@@ -10,6 +10,8 @@
   supervisors: job-supervisors-hire
   weight: 2 # Prioritize station & department jobs
   displayWeight: 30 # Second from the top
+  access:
+  - Captain
   accessGroups: # Frontier
   - GeneralAccess
   special:

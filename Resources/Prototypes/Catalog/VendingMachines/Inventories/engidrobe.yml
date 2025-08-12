@@ -21,6 +21,7 @@
     ClothingNeckScarfStripedOrange: 3
     ClothingShoesBootsWinterEngi: 2
     ClothingNeckCollarEngi: 2 # Floofstation - Collar addition
+    ClothingUniformFiresuitCroptop: 2 # Hardlight
     # Frontier
 # Atmos:
     ClothingBackpackDuffelAtmospherics: 2
@@ -38,6 +39,7 @@
     ClothingNeckScarfStripedLightBlue: 3
     ClothingMaskGasAtmos: 2
     ClothingShoesBootsWinterAtmos: 2 #Delta V: Add departmental winter boots
+    ClothingUniformFiresuitAtmosCroptop: 2 # Hardlight
 # Senior:
     ClothingUniformJumpsuitSeniorEngineer: 1
     ClothingUniformJumpskirtSeniorEngineer: 1

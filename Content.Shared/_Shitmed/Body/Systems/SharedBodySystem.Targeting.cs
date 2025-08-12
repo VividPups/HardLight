@@ -141,8 +141,8 @@ public partial class SharedBodySystem
                 // Otherwise we damage all parts equally (barotrauma, explosions, etc).
                 else if (damage != null)
                 {
-                    // Division by 2 cuz damaging all parts by the same damage by default is too much.
-                    damage /= 2;
+                    // Division by 10 cuz damaging all parts by the same damage by default is too much.
+                    damage /= 10;
                     targetPart = TargetBodyPart.All;
                 }
             }
@@ -434,7 +434,7 @@ public partial class SharedBodySystem
     {
         return partType switch
         {
-            BodyPartType.Head => 0.5f, // 50% damage, necks are hard to cut
+            BodyPartType.Head => 0.2f, // 20% damage, necks are hard to cut
             BodyPartType.Torso => 1.0f, // 100% damage
             BodyPartType.Arm => 0.7f, // 70% damage
             BodyPartType.Hand => 0.7f, // 70% damage

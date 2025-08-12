@@ -1,5 +1,5 @@
 - type: constructionGraph
-  id: WrappedBakePackage
+  id: WrappedDrugPackage
   start: start
   graph:
   - node: start
@@ -11,16 +11,3 @@
         doAfter: 1
   - node: empty
     entity: EmptyPacket
-    edges:
-    - to: bakeWrapped
-      steps:
-      - tool: Screwing
-        doAfter: 1
-      conditions:
-      - !type:MinSolution
-        solution: drink
-        reagent:
-          ReagentId: Bake
-        quantity: 30
-  - node: bakeWrapped
-    entity: WrappedBakePackage
