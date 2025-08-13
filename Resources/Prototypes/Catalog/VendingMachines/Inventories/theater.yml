@@ -117,6 +117,12 @@
     ClothingUniformEveSuitBlue: 3
     ClothingUniformEveSuitRed: 3
     ClothingUniformEveSuitWhite: 3
+    LatexSuitBlack: 3
+    LatexSuitBlue: 3
+    LatexSuitPurple: 3
+    LatexSuitRed: 3
+    LatexSuitWhite: 3
+    LatexSuitYellow: 3
   contrabandInventory:
     ClothingHeadHatRichard: 1
     ToyFigurineBoxer: 1

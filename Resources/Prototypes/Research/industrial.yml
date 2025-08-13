@@ -178,8 +178,8 @@
     - UtilityBeltChiefEngineer
     - BorgModuleAdvancedTool
     - BorgModuleRCD
-    # - Fulton # Frontier
-    # - FultonBeacon # Frontier
+    - Fulton # Frontier
+    - FultonBeacon # Frontier
     - NFBlueprintPowerDrill # Frontier
     - NFBlueprintJawsOfLife # Frontier
     - NFBlueprintWelderExperimental # Frontier
