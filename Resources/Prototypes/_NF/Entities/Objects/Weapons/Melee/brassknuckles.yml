@@ -2,7 +2,7 @@
   name: brass knuckles
   parent: ClothingHandsBase
   id: WeaponBrassKnuckles
-  description: When you need to punch just a little harder.
+  description: When you need to punch just a little harder. Design by SESWC  #Hardlight
   components:
   - type: Sprite
     sprite: _NF/Objects/Weapons/Melee/brassknuckles.rsi
