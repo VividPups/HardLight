@@ -57,4 +57,3 @@
   - type: RCDDeconstructable # HARDLIGHT
     cost: 10 # HARDLIGHT
     delay: 10 # HARDLIGHT
-  - type: rcd
