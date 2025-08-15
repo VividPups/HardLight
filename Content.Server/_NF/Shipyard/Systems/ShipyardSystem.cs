@@ -19,6 +19,16 @@ using Robust.Shared.Containers;
 using Content.Server._NF.Station.Components;
 using Robust.Shared.EntitySerialization.Systems;
 using Robust.Shared.Utility;
+using Content.Server.Shuttles.Save;
+using Robust.Shared.GameObjects;
+using Robust.Shared.IoC;
+using Robust.Shared.Network;
+using Robust.Shared.Player;
+using System;
+using Robust.Shared.Log; // ADDED: For Logger
+
+// using Content.Shared._NF.Shipyard.Systems; // REMOVED: Not needed, SharedShipyardSystem is in Content.Shared._NF.Shipyard
+using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage
 
 namespace Content.Server._NF.Shipyard.Systems;
 
@@ -33,6 +43,9 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     [Dependency] private readonly MetaDataSystem _metaData = default!;
     [Dependency] private readonly MapSystem _map = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private readonly IEntityManager _entityManager = default!;
+    [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
+    [Dependency] private readonly IServerNetManager _netManager = default!; // Ensure this is present
 
     public MapId? ShipyardMap { get; private set; }
     private float _shuttleIndex;
@@ -68,16 +81,58 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         _configManager.OnValueChanged(NFCCVars.Shipyard, SetShipyardEnabled); // NOTE: run immediately set to false, see comment above
 
         _configManager.OnValueChanged(NFCCVars.ShipyardSellRate, SetShipyardSellRate, true);
-        _sawmill = Logger.GetSawmill("shipyard");
+    _sawmill = Logger.GetSawmill("shipyard");
+    SubscribeNetworkEvent<RequestLoadShipMessage>(HandleLoadShipRequest);
 
-        SubscribeLocalEvent<ShipyardConsoleComponent, ComponentStartup>(OnShipyardStartup);
-        SubscribeLocalEvent<ShipyardConsoleComponent, BoundUIOpenedEvent>(OnConsoleUIOpened);
-        SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsoleSellMessage>(OnSellMessage);
-        SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsolePurchaseMessage>(OnPurchaseMessage);
-        SubscribeLocalEvent<ShipyardConsoleComponent, EntInsertedIntoContainerMessage>(OnItemSlotChanged);
-        SubscribeLocalEvent<ShipyardConsoleComponent, EntRemovedFromContainerMessage>(OnItemSlotChanged);
-        /* SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundRestart); */
-        SubscribeLocalEvent<StationDeedSpawnerComponent, MapInitEvent>(OnInitDeedSpawner);
+    SubscribeLocalEvent<ShipyardConsoleComponent, ComponentStartup>(OnShipyardStartup);
+    SubscribeLocalEvent<ShipyardConsoleComponent, BoundUIOpenedEvent>(OnConsoleUIOpened);
+    SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsoleSellMessage>(OnSellMessage);
+    SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsolePurchaseMessage>(OnPurchaseMessage);
+    SubscribeLocalEvent<ShipyardConsoleComponent, EntInsertedIntoContainerMessage>(OnItemSlotChanged);
+    SubscribeLocalEvent<ShipyardConsoleComponent, EntRemovedFromContainerMessage>(OnItemSlotChanged);
+    /* SubscribeLocalEvent<RoundRestartCleanupEvent>(OnRoundRestart); */
+    SubscribeLocalEvent<StationDeedSpawnerComponent, MapInitEvent>(OnInitDeedSpawner);
+
+    }
+    private void HandleLoadShipRequest(RequestLoadShipMessage message, EntitySessionEventArgs args)
+    {
+        var playerSession = args.SenderSession;
+        if (playerSession == null)
+            return;
+
+        var shipSerializationSystem = _entitySystemManager.GetEntitySystem<ShipSerializationSystem>();
+
+        try
+        {
+            var shipGridData = shipSerializationSystem.DeserializeShipGridDataFromYaml(message.YamlData, playerSession.UserId);
+
+            // Duplicate ship detection
+            if (EntityUid.TryParse(shipGridData.Metadata.OriginalGridId, out var originalGridUid) && _entityManager.EntityExists(originalGridUid))
+            {
+                throw new InvalidOperationException($"A ship with the original ID {shipGridData.Metadata.OriginalGridId} already exists on the server.");
+            }
+            // TODO: Add more robust duplicate checks, e.g., by ship name for the player.
+
+            var newShipGridUid = shipSerializationSystem.ReconstructShip(shipGridData);
+            Logger.Info($"Player {playerSession.Name} successfully loaded ship {shipGridData.Metadata.ShipName} (Grid: {newShipGridUid}).");
+
+            // TODO: Place the new ship in the world, assign ownership, etc.
+        }
+        catch (InvalidOperationException e)
+        {
+            Logger.Error($"Ship loading failed for {playerSession.Name} due to data tampering: {e.Message}");
+            // TODO: Send error message to client
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            Logger.Error($"Ship loading failed for {playerSession.Name} due to unauthorized access: {e.Message}");
+            // TODO: Send error message to client
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"An unexpected error occurred during ship loading for {playerSession.Name}: {e.Message}");
+            // TODO: Send generic error message to client
+        }
     }
     public override void Shutdown()
     {
@@ -91,10 +146,10 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         InitializeConsole();
     }
 
-/*     private void OnRoundRestart(RoundRestartCleanupEvent ev)
-    {
-        CleanupShipyard();
-    } */
+    /*     private void OnRoundRestart(RoundRestartCleanupEvent ev)
+        {
+            CleanupShipyard();
+        } */
 
     private void SetShipyardEnabled(bool value)
     {
