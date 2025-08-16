@@ -491,14 +491,26 @@ namespace Content.Server.Shuttles.Save
             }
             
             // Phase 1: Spawn all non-contained entities (containers, infrastructure, furniture)
-            // Phase 1: Spawning non-contained entities
-            var nonContainedEntities = primaryGridData.Entities.Where(e => !e.IsContained).ToList();
+            // Pre-filter entities into separate lists in a single pass
+            var nonContainedEntities = new List<EntityData>();
+            var containedEntitiesList = new List<EntityData>();
+            
+            foreach (var entity in primaryGridData.Entities)
+            {
+                if (string.IsNullOrEmpty(entity.Prototype))
+                    continue;
+                    
+                if (entity.IsContained)
+                    containedEntitiesList.Add(entity);
+                else
+                    nonContainedEntities.Add(entity);
+            }
             
             foreach (var entityData in nonContainedEntities)
             {
                 if (string.IsNullOrEmpty(entityData.Prototype))
                 {
-                    _sawmill.Debug($"Skipping entity with empty prototype at {entityData.Position}");
+                    // Skip entity with empty prototype
                     continue;
                 }
 
@@ -511,12 +523,11 @@ namespace Content.Server.Shuttles.Save
                     {
                         entityIdMapping[entityData.EntityId] = newEntity.Value;
                         spawnedEntities.Add((newEntity.Value, entityData.Prototype, entityData.Position));
-                        // Phase 1: Spawned entity
                     }
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Phase 1: Failed to spawn entity {entityData.Prototype} at {entityData.Position}: {ex.Message}");
+                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
                 }
             }
             
@@ -554,7 +565,6 @@ namespace Content.Server.Shuttles.Save
                             if (InsertIntoContainer(containedEntity.Value, parentContainer, entityData.ContainerSlot))
                             {
                                 containedSpawned++;
-                                // Phase 2: Spawned and inserted entity
                             }
                             else
                             {
@@ -562,7 +572,6 @@ namespace Content.Server.Shuttles.Save
                                 _entityManager.DeleteEntity(containedEntity.Value);
                                 entityIdMapping.Remove(entityData.EntityId);
                                 containedFailed++;
-                                _sawmill.Warning($"Phase 2: Failed to insert {entityData.Prototype} into container, entity deleted");
                             }
                         }
                         else
@@ -571,7 +580,6 @@ namespace Content.Server.Shuttles.Save
                             _entityManager.DeleteEntity(containedEntity.Value);
                             entityIdMapping.Remove(entityData.EntityId);
                             containedFailed++;
-                            _sawmill.Warning($"Phase 2: Parent container not found for {entityData.Prototype}, entity deleted");
                         }
                     }
                 }
@@ -584,29 +592,13 @@ namespace Content.Server.Shuttles.Save
             
             // Phase 2 complete
             
-            // Log comprehensive reconstruction statistics
-            LogReconstructionStats(primaryGridData, entityIdMapping, containedSpawned, containedFailed);
-            
-            // Final verification and cleanup
-            var finalOverlapCheck = primaryGridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1).ToList();
-            if (finalOverlapCheck.Any())
+            // Log basic reconstruction statistics (only if there are failures)
+            if (containedFailed > 0)
             {
-                foreach (var group in finalOverlapCheck)
-                {
-                    var spawnedAtPosition = spawnedEntities.Where(e => 
-                        Math.Abs(e.position.X - group.Key.X) < 0.01f && 
-                        Math.Abs(e.position.Y - group.Key.Y) < 0.01f).ToList();
-                    
-                    //_sawmill.Info($"Position ({group.Key.X}, {group.Key.Y}): Expected {group.Count()} entities, spawned {spawnedAtPosition.Count}");
-                    
-                    if (spawnedAtPosition.Count != group.Count())
-                    {
-                        _sawmill.Error($"ENTITY LOSS DETECTED at ({group.Key.X}, {group.Key.Y})!");
-                        _sawmill.Error($"  Expected: {string.Join(", ", group.Select(e => e.Prototype))}");
-                        _sawmill.Error($"  Spawned: {string.Join(", ", spawnedAtPosition.Select(e => e.prototype))}");
-                    }
-                }
+                _sawmill.Warning($"{containedFailed} contained entities could not be properly placed");
             }
+            
+            // Skip expensive overlap/verification checking for performance
 
             return newGrid.Owner;
         }
@@ -853,25 +845,40 @@ namespace Content.Server.Shuttles.Save
                 var sortedEntities = grid.Entities.OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y).ToList();
                 checksumBuilder.Append($":E{sortedEntities.Count}");
                 
-                // Entity prototype counts
-                var entityProtoCounts = sortedEntities.GroupBy(e => e.Prototype).OrderBy(g => g.Key)
-                    .Select(g => $"{g.Key.Substring(0, Math.Min(6, g.Key.Length))}{g.Count()}").ToList();
-                checksumBuilder.Append($"[{string.Join(",", entityProtoCounts)}]");
+                // Entity prototype counts - optimized grouping
+                checksumBuilder.Append('[');
+                var first = true;
+                foreach (var group in sortedEntities.GroupBy(e => e.Prototype).OrderBy(g => g.Key))
+                {
+                    if (!first) checksumBuilder.Append(',');
+                    checksumBuilder.Append(group.Key.Substring(0, Math.Min(6, group.Key.Length)));
+                    checksumBuilder.Append(group.Count());
+                    first = false;
+                }
+                checksumBuilder.Append(']');
                 
                 // Container relationship counts for tamper detection
                 var containerCount = sortedEntities.Count(e => e.IsContainer);
                 var containedCount = sortedEntities.Count(e => e.IsContained);
                 checksumBuilder.Append($":C{containerCount}x{containedCount}");
                 
-                // Component data integrity check
+                // Component data integrity check - optimized
                 var totalComponents = sortedEntities.Sum(e => e.Components.Count);
-                var componentTypes = sortedEntities
+                checksumBuilder.Append($":CM{totalComponents}[");
+                var componentGroups = sortedEntities
                     .SelectMany(e => e.Components)
                     .GroupBy(c => c.Type)
                     .OrderBy(g => g.Key)
-                    .Select(g => $"{g.Key.Substring(0, Math.Min(3, g.Key.Length))}{g.Count()}")
-                    .ToList();
-                checksumBuilder.Append($":CM{totalComponents}[{string.Join(",", componentTypes.Take(10))}]");
+                    .Take(10);
+                first = true;
+                foreach (var group in componentGroups)
+                {
+                    if (!first) checksumBuilder.Append(',');
+                    checksumBuilder.Append(group.Key.Substring(0, Math.Min(3, group.Key.Length)));
+                    checksumBuilder.Append(group.Count());
+                    first = false;
+                }
+                checksumBuilder.Append(']');
                 
                 // Position checksum for tamper detection (including container relationships)
                 var tileCoordSum = sortedTiles.Sum(t => t.X * 100 + t.Y);
@@ -1874,37 +1881,5 @@ namespace Content.Server.Shuttles.Save
             // Legacy reconstruction complete
         }
 
-        private void LogReconstructionStats(GridData gridData, Dictionary<string, EntityUid> entityIdMapping, int containedSpawned, int containedFailed)
-        {
-            try
-            {
-                var totalEntities = gridData.Entities.Count;
-                var containerEntities = gridData.Entities.Count(e => e.IsContainer);
-                var containedEntities = gridData.Entities.Count(e => e.IsContained);
-                var nonContainedEntities = gridData.Entities.Count(e => !e.IsContained);
-                var successfullyMapped = entityIdMapping.Count;
-
-                // Ship reconstruction statistics
-                // Total entities in save
-                // Non-contained entities
-                // Contained entities
-                // Container entities
-                // Successfully spawned entities
-                // Contained entities inserted
-                // Contained entities failed
-                
-                var successRate = totalEntities > 0 ? (float)(successfullyMapped) / totalEntities * 100 : 0;
-                _sawmill.Info($"Ship reconstruction: {successRate:F1}% entity success rate");
-
-                if (containedFailed > 0)
-                {
-                    _sawmill.Warning($"{containedFailed} entities could not be properly contained and were placed on the floor");
-                }
-            }
-            catch (Exception ex)
-            {
-                _sawmill.Warning($"Failed to log reconstruction stats: {ex.Message}");
-            }
-        }
     }
 }
