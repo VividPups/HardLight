@@ -6,7 +6,7 @@
     edges:
     - to: done
       steps:
-      - material: Platsteel
+      - material: Steel
         amount: 30
         doAfter: 5
   - node: done
