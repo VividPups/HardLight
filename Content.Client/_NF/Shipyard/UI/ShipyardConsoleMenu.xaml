@@ -52,8 +52,9 @@
                 Text="Sell"
                 Disabled="True" />
             <Button Name="SaveShipButton"
-                Text="Save Ship"
-                Disabled="True" />
+                Text="Save Ship (Dino &amp; Venom Double Doc Special)"
+                Disabled="True"
+                StyleClasses="ButtonCaution" />
             <Button Name="LoadShipButton"
                 Text="Load Ship"
                 Disabled="True" />

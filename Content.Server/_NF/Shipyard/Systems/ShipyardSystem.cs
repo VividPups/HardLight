@@ -151,6 +151,8 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 _shuttleIndex += gridComp.LocalAABB.Width + ShuttleSpawnBuffer;
             }
 
+            // Atmosphere should now be automatically restored during ship reconstruction
+
             // Dock the loaded ship to the console's grid (similar to purchase behavior)
             if (TryComp<ShuttleComponent>(newShipGridUid, out var shuttleComponent))
             {
@@ -174,16 +176,22 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             if (playerEntity != null)
             {
-                // Try to add deed to player's ID if they have one
-                if (TryComp<IdCardComponent>(playerEntity.Value, out var idCard))
+                // Find the player's ID card entity and add deed to it
+                // Check if the player is holding an ID card or has one equipped
+                var idCardEntity = FindPlayerIdCard(playerEntity.Value);
+                if (idCardEntity != null)
                 {
-                    var deedComponent = EnsureComp<ShuttleDeedComponent>(playerEntity.Value);
+                    var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardEntity.Value);
                     deedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
                     deedComponent.ShuttleName = shipGridData.Metadata.ShipName;
                     deedComponent.ShuttleOwner = playerSession.Name;
                     deedComponent.PurchasedWithVoucher = false;
-                    Dirty(playerEntity.Value, deedComponent);
-                    _sawmill.Info($"Added deed to player's ID card");
+                    Dirty(idCardEntity.Value, deedComponent);
+                    _sawmill.Info($"Added deed to player's ID card entity {idCardEntity.Value}");
+                }
+                else
+                {
+                    _sawmill.Warning($"Could not find ID card for player {playerSession.Name}");
                 }
             }
 
@@ -209,6 +217,27 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         {
             _sawmill.Error($"An unexpected error occurred during ship loading for {playerSession.Name}: {e.Message}");
         }
+    }
+
+    private EntityUid? FindPlayerIdCard(EntityUid playerEntity)
+    {
+        // Check if the player has an ID card equipped or in inventory
+        // This is a simplified approach - in a real system you'd check equipment slots
+        
+        // Look for entities with IdCardComponent that the player owns/has
+        var idCardQuery = EntityQueryEnumerator<IdCardComponent>();
+        while (idCardQuery.MoveNext(out var cardUid, out var idCard))
+        {
+            // Check if this ID card is associated with the player (simplified check)
+            // In a more complete system, you'd check equipment slots, inventory, etc.
+            if (TryComp<TransformComponent>(cardUid, out var cardTransform) &&
+                cardTransform.ParentUid == playerEntity)
+            {
+                return cardUid;
+            }
+        }
+        
+        return null;
     }
     public override void Shutdown()
     {

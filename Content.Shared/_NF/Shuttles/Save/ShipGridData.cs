@@ -57,6 +57,9 @@ namespace Content.Shared.Shuttles.Save
 
         [DataField("entities")]
         public List<EntityData> Entities { get; set; } = new();
+
+        [DataField("atmosphere")]
+        public string? AtmosphereData { get; set; } = null;
     }
 
     [Serializable]
@@ -86,6 +89,9 @@ namespace Content.Shared.Shuttles.Save
 
         [DataField("position")]
         public Vector2 Position { get; set; } = Vector2.Zero;
+
+        [DataField("rotation")]
+        public float Rotation { get; set; } = 0.0f;
 
         [DataField("components")]
         public List<ComponentData> Components { get; set; } = new();

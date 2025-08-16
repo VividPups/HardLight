@@ -20,6 +20,10 @@ using Content.Shared.Coordinates;
 using Content.Shared.Coordinates.Helpers;
 using Robust.Shared.Log;
 using Robust.Server.GameObjects;
+using Content.Server.Atmos.Components;
+using Content.Server.Atmos;
+using Robust.Shared.Containers;
+using Robust.Server.Physics;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -30,6 +34,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly ISerializationManager _serializationManager = default!;
         [Dependency] private readonly ITileDefinitionManager _tileDefManager = default!;
         [Dependency] private readonly MapSystem _map = default!;
+        [Dependency] private readonly GridFixtureSystem _gridFixture = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -88,6 +93,26 @@ namespace Content.Server.Shuttles.Save
 
             _sawmill.Info($"Serialized {gridData.Tiles.Count} tiles");
 
+            // Serialize atmosphere data
+            if (_entityManager.TryGetComponent<GridAtmosphereComponent>(gridId, out var atmosphereComponent))
+            {
+                try
+                {
+                    var atmosphereNode = _serializationManager.WriteValue(atmosphereComponent.Tiles);
+                    var atmosphereYaml = _serializer.Serialize(atmosphereNode);
+                    gridData.AtmosphereData = atmosphereYaml;
+                    _sawmill.Info($"Serialized atmosphere data for {atmosphereComponent.Tiles.Count} atmosphere tiles");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to serialize atmosphere data: {ex.Message}");
+                }
+            }
+            else
+            {
+                _sawmill.Warning("No atmosphere component found on grid, atmosphere will not be preserved");
+            }
+
             // Simplified entity serialization
             foreach (var entity in _entityManager.EntityQuery<TransformComponent>())
             {
@@ -96,13 +121,22 @@ namespace Content.Server.Shuttles.Save
 
                 var uid = entity.Owner;
                 var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(uid);
+                
+                // Skip entities that are inside containers (items in lockers, pockets, etc.)
+                if (IsEntityContained(uid, gridId))
+                {
+                    _sawmill.Debug($"Skipping entity {uid} ({meta?.EntityPrototype?.ID}) - inside container");
+                    continue;
+                }
+                
                 var proto = meta?.EntityPrototype?.ID ?? string.Empty;
 
                 var entityData = new EntityData
                 {
                     EntityId = uid.ToString(),
                     Prototype = proto,
-                    Position = entity.LocalPosition
+                    Position = entity.LocalPosition,
+                    Rotation = (float)entity.LocalRotation.Theta
                 };
 
                 gridData.Entities.Add(entityData);
@@ -163,6 +197,11 @@ namespace Content.Server.Shuttles.Save
             
             var newGrid = _mapManager.CreateGrid(targetMap);
             _sawmill.Info($"Created new grid {newGrid.Owner} on shipyard map {targetMap}");
+            
+            // Temporarily disable grid splitting to prevent ship from being cut up during reconstruction
+            var originalSplitAllowed = _gridFixture.SplitAllowed;
+            _gridFixture.SplitAllowed = false;
+            _sawmill.Debug("Disabled grid splitting for ship reconstruction");
 
             // Move grid to the specified offset position
             var gridXform = Transform(newGrid.Owner);
@@ -188,6 +227,38 @@ namespace Content.Server.Shuttles.Save
                 }
             }
 
+            // Restore atmosphere data if available
+            if (!string.IsNullOrEmpty(primaryGridData.AtmosphereData))
+            {
+                try
+                {
+                    var atmosphereNode = _deserializer.Deserialize<object>(primaryGridData.AtmosphereData);
+                    var atmosTiles = _serializationManager.Read<Dictionary<Vector2i, TileAtmosphere>>(atmosphereNode);
+                    
+                    // Get or create the GridAtmosphereComponent
+                    var atmosComponent = _entityManager.EnsureComponent<GridAtmosphereComponent>(newGrid.Owner);
+                    
+                    // Restore atmosphere tiles - update grid references
+                    atmosComponent.Tiles.Clear();
+                    foreach (var (coord, tile) in atmosTiles)
+                    {
+                        tile.GridIndex = newGrid.Owner;
+                        tile.GridIndices = coord;
+                        atmosComponent.Tiles[coord] = tile;
+                    }
+                    
+                    _sawmill.Info($"Restored atmosphere data for {atmosTiles.Count} tiles");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to restore atmosphere data: {ex.Message}");
+                }
+            }
+            else
+            {
+                _sawmill.Warning("No atmosphere data found in ship save, ship will have no air");
+            }
+
             foreach (var entityData in primaryGridData.Entities)
             {
                 // Skip entities with empty or null prototypes
@@ -197,11 +268,19 @@ namespace Content.Server.Shuttles.Save
                     continue;
                 }
 
-                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position}");
+                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position} with rotation {entityData.Rotation}");
                 try
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
                     var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    
+                    // Apply rotation if it exists
+                    if (Math.Abs(entityData.Rotation) > 0.001f)
+                    {
+                        var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
+                        transform.LocalRotation = new Angle(entityData.Rotation);
+                    }
+                    
                     _sawmill.Debug($"Spawned entity {newEntity}");
                 }
                 catch (Exception ex)
@@ -232,6 +311,58 @@ namespace Content.Server.Shuttles.Save
             var newGrid = _mapManager.CreateGrid(mapId);
             _sawmill.Info($"Created new grid {newGrid.Owner} on map {mapId}");
 
+            // Reconstruct tiles first
+            foreach (var tileData in primaryGridData.Tiles)
+            {
+                if (string.IsNullOrEmpty(tileData.TileType) || tileData.TileType == "Space")
+                    continue;
+
+                try
+                {
+                    var tileDef = _tileDefManager[tileData.TileType];
+                    var tile = new Tile(tileDef.TileId);
+                    var tileCoords = new Vector2i(tileData.X, tileData.Y);
+                    _map.SetTile(newGrid.Owner, newGrid, tileCoords, tile);
+                    _sawmill.Debug($"Placed tile {tileData.TileType} at {tileCoords}");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to place tile {tileData.TileType} at ({tileData.X}, {tileData.Y}): {ex.Message}");
+                }
+            }
+
+            // Restore atmosphere data if available
+            if (!string.IsNullOrEmpty(primaryGridData.AtmosphereData))
+            {
+                try
+                {
+                    var atmosphereNode = _deserializer.Deserialize<object>(primaryGridData.AtmosphereData);
+                    var atmosTiles = _serializationManager.Read<Dictionary<Vector2i, TileAtmosphere>>(atmosphereNode);
+                    
+                    // Get or create the GridAtmosphereComponent
+                    var atmosComponent = _entityManager.EnsureComponent<GridAtmosphereComponent>(newGrid.Owner);
+                    
+                    // Restore atmosphere tiles - update grid references
+                    atmosComponent.Tiles.Clear();
+                    foreach (var (coord, tile) in atmosTiles)
+                    {
+                        tile.GridIndex = newGrid.Owner;
+                        tile.GridIndices = coord;
+                        atmosComponent.Tiles[coord] = tile;
+                    }
+                    
+                    _sawmill.Info($"Restored atmosphere data for {atmosTiles.Count} tiles");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to restore atmosphere data: {ex.Message}");
+                }
+            }
+            else
+            {
+                _sawmill.Warning("No atmosphere data found in ship save, ship will have no air");
+            }
+
             foreach (var entityData in primaryGridData.Entities)
             {
                 // Skip entities with empty or null prototypes
@@ -241,11 +372,19 @@ namespace Content.Server.Shuttles.Save
                     continue;
                 }
 
-                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position}");
+                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position} with rotation {entityData.Rotation}");
                 try
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
                     var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    
+                    // Apply rotation if it exists
+                    if (Math.Abs(entityData.Rotation) > 0.001f)
+                    {
+                        var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
+                        transform.LocalRotation = new Angle(entityData.Rotation);
+                    }
+                    
                     _sawmill.Debug($"Spawned entity {newEntity}");
                 }
                 catch (Exception ex)
@@ -256,6 +395,30 @@ namespace Content.Server.Shuttles.Save
             }
 
             return newGrid.Owner;
+        }
+
+        private bool IsEntityContained(EntityUid entityUid, EntityUid gridId)
+        {
+            // Check if this entity is contained within another entity (not directly on the grid)
+            if (_entityManager.TryGetComponent<TransformComponent>(entityUid, out var transformComp))
+            {
+                var parent = transformComp.ParentUid;
+                while (parent.IsValid() && parent != gridId)
+                {
+                    // If we find a parent that has a ContainerManagerComponent, this entity is contained
+                    if (_entityManager.HasComponent<ContainerManagerComponent>(parent))
+                    {
+                        return true;
+                    }
+                    
+                    // Move up the hierarchy
+                    if (_entityManager.TryGetComponent<TransformComponent>(parent, out var parentTransform))
+                        parent = parentTransform.ParentUid;
+                    else
+                        break;
+                }
+            }
+            return false;
         }
 
         private string GenerateChecksum(List<GridData> grids)
