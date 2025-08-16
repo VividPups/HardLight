@@ -20,6 +20,9 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
         [Dependency] private readonly IServerNetManager _netManager = default!;
+        
+        // Store pending admin requests
+        private static readonly Dictionary<string, Action<string>> _pendingAdminRequests = new();
 
         public override void Initialize()
         {
@@ -27,6 +30,8 @@ namespace Content.Server.Shuttles.Save
             SubscribeNetworkEvent<RequestSaveShipServerMessage>(OnRequestSaveShipServer);
             SubscribeNetworkEvent<RequestLoadShipMessage>(OnRequestLoadShip);
             SubscribeNetworkEvent<RequestAvailableShipsMessage>(OnRequestAvailableShips);
+            SubscribeNetworkEvent<AdminSendPlayerShipsMessage>(OnAdminSendPlayerShips);
+            SubscribeNetworkEvent<AdminSendShipDataMessage>(OnAdminSendShipData);
         }
 
         private void OnRequestSaveShipServer(RequestSaveShipServerMessage msg, EntitySessionEventArgs args)
@@ -130,6 +135,49 @@ namespace Content.Server.Shuttles.Save
 
             // Client handles available ships from local user data
             Logger.Info($"Player {playerSession.Name} requested available ships - client handles this locally");
+        }
+
+        private void OnAdminSendPlayerShips(AdminSendPlayerShipsMessage msg, EntitySessionEventArgs args)
+        {
+            var key = $"player_ships_{msg.AdminName}";
+            if (_pendingAdminRequests.TryGetValue(key, out var callback))
+            {
+                var result = $"Ships for player:\n";
+                foreach (var (filename, shipName, timestamp, checksum) in msg.Ships)
+                {
+                    var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+                    result += $"  {shipName} ({filename})\n";
+                    result += $"    Saved: {timestamp:yyyy-MM-dd HH:mm:ss}\n";
+                    result += $"    Checksum: {shortChecksum}\n";
+                }
+                callback(result);
+                _pendingAdminRequests.Remove(key);
+            }
+        }
+
+        private void OnAdminSendShipData(AdminSendShipDataMessage msg, EntitySessionEventArgs args)
+        {
+            var key = $"ship_data_{msg.AdminName}_{msg.ShipFilename}";
+            if (_pendingAdminRequests.TryGetValue(key, out var callback))
+            {
+                callback(msg.ShipData);
+                _pendingAdminRequests.Remove(key);
+            }
+        }
+
+        public static void RegisterAdminRequest(string key, Action<string> callback)
+        {
+            _pendingAdminRequests[key] = callback;
+        }
+
+        public void SendAdminRequestPlayerShips(Guid playerId, string adminName, ICommonSession targetSession)
+        {
+            RaiseNetworkEvent(new AdminRequestPlayerShipsMessage(playerId, adminName), targetSession);
+        }
+
+        public void SendAdminRequestShipData(string filename, string adminName, ICommonSession targetSession)
+        {
+            RaiseNetworkEvent(new AdminRequestShipDataMessage(filename, adminName), targetSession);
         }
     }
 }

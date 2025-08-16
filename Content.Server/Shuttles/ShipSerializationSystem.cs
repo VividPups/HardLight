@@ -117,12 +117,12 @@ namespace Content.Server.Shuttles.Save
                 });
             }
 
-            _sawmill.Info($"Serialized {gridData.Tiles.Count} tiles");
+            // Serialized tiles
             
 
             // Skip atmosphere serialization as TileAtmosphere is not serializable
             // Atmosphere will be restored using fixgridatmos command during loading
-            _sawmill.Info("Skipping atmosphere serialization - will use fixgridatmos during load");
+            // Skipping atmosphere serialization
 
             // Serialize decal data
             if (_entityManager.TryGetComponent<DecalGridComponent>(gridId, out var decalComponent))
@@ -132,7 +132,7 @@ namespace Content.Server.Shuttles.Save
                     var decalNode = _serializationManager.WriteValue(decalComponent.ChunkCollection, notNullableOverride: true);
                     var decalYaml = _serializer.Serialize(decalNode);
                     gridData.DecalData = decalYaml;
-                    _sawmill.Info($"Serialized decal data for grid");
+                    // Serialized decal data
                 }
                 catch (Exception ex)
                 {
@@ -141,7 +141,7 @@ namespace Content.Server.Shuttles.Save
             }
             else
             {
-                _sawmill.Info("No decal component found on grid, decals will not be preserved");
+                // No decal component found
             }
 
             // Enhanced entity serialization - includes all entities on grid and in containers
@@ -162,7 +162,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     gridData.Entities.Add(entityData);
                     serializedEntities.Add(uid);
-                    _sawmill.Debug($"Serialized entity {uid} ({proto}) - Container: {entityData.IsContained}");
+                    // Serialized entity
                 }
             }
 
@@ -188,7 +188,7 @@ namespace Content.Server.Shuttles.Save
             // Generate server-bound checksum AFTER all data is finalized
             var checksum = GenerateServerBoundChecksum(shipGridData);
             shipGridData.Metadata.Checksum = checksum;
-            _sawmill.Info($"Generated server-bound checksum for ship save: {checksum}");
+            _sawmill.Info($"Ship serialized with checksum: {checksum.Substring(0, Math.Min(30, checksum.Length))}...");
 
             return shipGridData;
         }
@@ -205,13 +205,13 @@ namespace Content.Server.Shuttles.Save
 
         public ShipGridData DeserializeShipGridDataFromYaml(string yamlString, Guid loadingPlayerId, out bool wasLegacyConverted)
         {
-            _sawmill.Info($"Deserializing YAML for player {loadingPlayerId}");
+            _sawmill.Info($"Deserializing ship YAML for player {loadingPlayerId}");
             wasLegacyConverted = false;
             ShipGridData data;
             try
             {
                 data = _deserializer.Deserialize<ShipGridData>(yamlString);
-                _sawmill.Debug($"Successfully deserialized YAML data");
+                // Successfully deserialized YAML
             }
             catch (Exception ex)
             {
@@ -221,7 +221,7 @@ namespace Content.Server.Shuttles.Save
 
             // Store original checksum BEFORE any calculations
             var originalStoredChecksum = data.Metadata.Checksum;
-            _sawmill.Info($"ORIGINAL stored checksum from file: {originalStoredChecksum}");
+            // Original stored checksum
             
             // Check if this is a server-bound checksum
             if (originalStoredChecksum.StartsWith("S:"))
@@ -230,7 +230,7 @@ namespace Content.Server.Shuttles.Save
                 if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
                 {
                     var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
-                    _sawmill.Error($"Ship is blacklisted: {reason}");
+                    _sawmill.Warning($"SECURITY: Blacklisted ship load attempt blocked - {reason}");
                     throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
                 }
                 
@@ -247,7 +247,7 @@ namespace Content.Server.Shuttles.Save
                 if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
                 {
                     var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
-                    _sawmill.Error($"Ship is blacklisted: {reason}");
+                    _sawmill.Warning($"SECURITY: Blacklisted ship load attempt blocked - {reason}");
                     throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
                 }
                 // Legacy checksum validation
@@ -259,11 +259,11 @@ namespace Content.Server.Shuttles.Save
                     _sawmill.Error($"BUG: Stored checksum was modified during GenerateChecksum! Was: {originalStoredChecksum}, Now: {data.Metadata.Checksum}");
                 }
                 
-                _sawmill.Info($"Expected checksum: {originalStoredChecksum}");
-                _sawmill.Info($"Actual checksum: {actualChecksum}");
-                _sawmill.Debug($"Grid count: {data.Grids.Count}");
-                _sawmill.Debug($"Tile count: {data.Grids[0].Tiles.Count}");
-                _sawmill.Debug($"Entity count: {data.Grids[0].Entities.Count}");
+                // Expected checksum
+                // Actual checksum
+                // Grid count
+                // Tile count
+                // Entity count
                 
                 // Check if checksum validation is enabled via cvar
                 var checksumValidationEnabled = _configManager.GetCVar(NFCCVars.ShipyardChecksumValidation);
@@ -280,13 +280,13 @@ namespace Content.Server.Shuttles.Save
                     {
                         // Legacy SHA256 checksum - regenerate current checksum and update file metadata for future saves
                         _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum}");
-                        _sawmill.Warning($"This ship will be automatically converted to use the new checksum format");
-                        _sawmill.Info($"Current checksum would be: {actualChecksum}");
+                        _sawmill.Info($"Legacy checksum detected - ship will be converted to secure format");
+                        // Current checksum
                         
                         // Update the metadata with new checksum for conversion
                         data.Metadata.Checksum = actualChecksum;
                     wasLegacyConverted = true;
-                    _sawmill.Info("Legacy checksum compatibility mode - validation passed, marked for conversion");
+                    // Legacy checksum compatibility mode
                 }
                 else if (isLegacyEnhanced)
                 {
@@ -299,8 +299,8 @@ namespace Content.Server.Shuttles.Save
                         _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
                         _sawmill.Error($"Expected: {cleanStoredChecksum}");
                         _sawmill.Error($"Actual: {actualChecksum}");
-                        _sawmill.Error($"Ship data has been tampered with!");
-                        _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                        _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
+                        _sawmill.Error($"SECURITY: Tampered ship - {data.Metadata.ShipName} by player {data.Metadata.PlayerId}");
                         throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
                     }
                     
@@ -310,7 +310,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     // Legacy basic format (before container support) - convert to new format
                     _sawmill.Warning($"Legacy basic checksum detected: {originalStoredChecksum}");
-                    _sawmill.Warning($"This ship will be automatically converted to include container/component data");
+                    _sawmill.Info($"Basic checksum detected - ship will be upgraded to enhanced format");
                     _sawmill.Info($"Current enhanced checksum would be: {actualChecksum}");
                     
                     // Update the metadata with new checksum for conversion
@@ -326,8 +326,8 @@ namespace Content.Server.Shuttles.Save
                         _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
                         _sawmill.Error($"Expected: {originalStoredChecksum}");
                         _sawmill.Error($"Actual: {actualChecksum}");
-                        _sawmill.Error($"Ship data has been tampered with!");
-                        _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                        _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
+                        _sawmill.Error($"SECURITY: Tampered ship - {data.Metadata.ShipName} by player {data.Metadata.PlayerId}");
                         throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
                     }
                     
@@ -370,18 +370,18 @@ namespace Content.Server.Shuttles.Save
 
         public EntityUid ReconstructShipOnMap(ShipGridData shipGridData, MapId targetMap, Vector2 offset)
         {
-            _sawmill.Info($"Reconstructing ship with {shipGridData.Grids.Count} grids on map {targetMap} at offset {offset}");
+            _sawmill.Info($"Reconstructing ship: {shipGridData.Grids.Count} grids, {shipGridData.Grids[0].Entities.Count} entities");
             if (shipGridData.Grids.Count == 0)
             {
                 throw new ArgumentException("No grid data to reconstruct.");
             }
 
             var primaryGridData = shipGridData.Grids[0];
-            _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
-            _sawmill.Info($"Primary grid has {primaryGridData.Tiles.Count} tiles");
+            // Primary grid entities
+            // Primary grid tiles
             
             var newGrid = _mapManager.CreateGrid(targetMap);
-            _sawmill.Info($"Created new grid {newGrid.Owner} on shipyard map {targetMap}");
+            // Created new grid
             
             // Note: Grid splitting prevention would require internal access
             // TODO: Investigate alternative approaches to prevent grid splitting
@@ -429,10 +429,10 @@ namespace Content.Server.Shuttles.Save
             {
                 _map.SetTile(newGrid.Owner, newGrid, coords, tile);
             }
-            _sawmill.Info($"Placed {tilesToPlace.Count} tiles in connectivity order");
+            // Placed tiles
 
             // Apply fixgridatmos-style atmosphere to all loaded ships
-            _sawmill.Info("Applying fixgridatmos-style atmosphere to loaded ship");
+            // Applying atmosphere
             ApplyFixGridAtmosphereToGrid(newGrid.Owner);
 
             // Restore decal data using proper DecalSystem API
@@ -499,7 +499,7 @@ namespace Content.Server.Shuttles.Save
             }
             
             // Phase 1: Spawn all non-contained entities (containers, infrastructure, furniture)
-            _sawmill.Info("Phase 1: Spawning non-contained entities");
+            // Phase 1: Spawning non-contained entities
             var nonContainedEntities = primaryGridData.Entities.Where(e => !e.IsContained).ToList();
             
             foreach (var entityData in nonContainedEntities)
@@ -519,7 +519,7 @@ namespace Content.Server.Shuttles.Save
                     {
                         entityIdMapping[entityData.EntityId] = newEntity.Value;
                         spawnedEntities.Add((newEntity.Value, entityData.Prototype, entityData.Position));
-                        _sawmill.Debug($"Phase 1: Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
+                        // Phase 1: Spawned entity
                     }
                 }
                 catch (Exception ex)
@@ -528,10 +528,10 @@ namespace Content.Server.Shuttles.Save
                 }
             }
             
-            _sawmill.Info($"Phase 1 complete: Spawned {spawnedEntities.Count} non-contained entities");
+            // Phase 1 complete
             
             // Phase 2: Spawn contained entities and insert them into containers
-            _sawmill.Info("Phase 2: Spawning contained entities and inserting into containers");
+            // Phase 2: Spawning contained entities
             var containedEntities = primaryGridData.Entities.Where(e => e.IsContained).ToList();
             var containedSpawned = 0;
             var containedFailed = 0;
@@ -562,7 +562,7 @@ namespace Content.Server.Shuttles.Save
                             if (InsertIntoContainer(containedEntity.Value, parentContainer, entityData.ContainerSlot))
                             {
                                 containedSpawned++;
-                                _sawmill.Debug($"Phase 2: Spawned and inserted entity {containedEntity} ({entityData.Prototype}) into container {parentContainer}");
+                                // Phase 2: Spawned and inserted entity
                             }
                             else
                             {
@@ -592,7 +592,7 @@ namespace Content.Server.Shuttles.Save
                 }
             }
             
-            _sawmill.Info($"Phase 2 complete: {containedSpawned} contained entities inserted, {containedFailed} placed on floor");
+            // Phase 2 complete
             
             // Log comprehensive reconstruction statistics
             LogReconstructionStats(primaryGridData, entityIdMapping, containedSpawned, containedFailed);
@@ -630,7 +630,7 @@ namespace Content.Server.Shuttles.Save
             }
 
             var primaryGridData = shipGridData.Grids[0];
-            _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
+            // Primary grid entities
             
             // Note: Grid splitting prevention would require internal access
             // TODO: Investigate alternative approaches to prevent grid splitting
@@ -681,10 +681,10 @@ namespace Content.Server.Shuttles.Save
             {
                 _map.SetTile(newGrid.Owner, newGrid, coords, tile);
             }
-            _sawmill.Info($"Placed {tilesToPlace.Count} tiles in connectivity order");
+            // Placed tiles
 
             // Apply fixgridatmos-style atmosphere to all loaded ships
-            _sawmill.Info("Applying fixgridatmos-style atmosphere to loaded ship");
+            // Applying atmosphere
             ApplyFixGridAtmosphereToGrid(newGrid.Owner);
 
             // Restore decal data using proper DecalSystem API
@@ -941,7 +941,7 @@ namespace Content.Server.Shuttles.Save
             // Verify base checksum first
             if (!string.Equals(storedBaseChecksum, actualBaseChecksum, StringComparison.OrdinalIgnoreCase))
             {
-                _sawmill.Error("Base checksum validation failed - ship data has been tampered with");
+                _sawmill.Error("SECURITY VIOLATION: Base checksum validation failed - ship data tampered");
                 _sawmill.Error($"Expected: {storedBaseChecksum}");
                 _sawmill.Error($"Actual: {actualBaseChecksum}");
                 return false;
@@ -953,8 +953,8 @@ namespace Content.Server.Shuttles.Save
             
             if (!expectedBinding.StartsWith(storedServerBinding))
             {
-                _sawmill.Error("Server binding validation failed! Ship was saved on a different server and cannot be loaded here for security reasons.");
-                _sawmill.Error($"This prevents loading ships created in development environments on production servers.");
+                _sawmill.Error("SECURITY: Server binding validation failed - ship from different server rejected");
+                _sawmill.Info($"Security feature: Prevents loading dev ships on production servers");
                 return false;
             }
             
@@ -1059,6 +1059,12 @@ namespace Content.Server.Shuttles.Save
                     return SerializeSolutionComponent(solutionManager);
                 }
 
+                // Special handling for paper components to preserve content and stamps
+                if (component is Content.Shared.Paper.PaperComponent paperComponent)
+                {
+                    return SerializePaperComponent(paperComponent);
+                }
+
                 // Use RobustToolbox's serialization system to serialize the component
                 var node = _serializationManager.WriteValue(componentType, component, notNullableOverride: true);
                 var yamlData = _serializer.Serialize(node);
@@ -1073,7 +1079,7 @@ namespace Content.Server.Shuttles.Save
                 // Log important component preservation
                 if (IsImportantComponent(componentType))
                 {
-                    _sawmill.Debug($"Preserved important component: {typeName}");
+                    _sawmill.Info($"✓ Preserved important component: {typeName}");
                 }
 
                 return componentData;
@@ -1085,11 +1091,18 @@ namespace Content.Server.Shuttles.Save
                 // Don't log warnings for expected problematic components
                 if (IsProblematicComponent(componentType))
                 {
-                    _sawmill.Debug($"Expected serialization failure for component {componentType.Name}: {ex.Message}");
+                    // Reduce noise - only log at debug level for expected failures
+                    _sawmill.Debug($"Expected serialization failure for component {componentType.Name}");
+                }
+                else if (IsImportantComponent(componentType))
+                {
+                    // Only warn for important components that fail
+                    _sawmill.Warning($"Failed to serialize important component {componentType.Name}: {ex.Message}");
                 }
                 else
                 {
-                    _sawmill.Warning($"Failed to serialize component {componentType.Name}: {ex.Message}");
+                    // Less important components - just debug
+                    _sawmill.Debug($"Failed to serialize component {componentType.Name}: {ex.Message}");
                 }
                 return null;
             }
@@ -1115,7 +1128,19 @@ namespace Content.Server.Shuttles.Save
             if (typeName.Contains("Runtime") || typeName.Contains("Generated") || typeName.Contains("Dynamic"))
                 return true;
 
-            return false;
+            // Known problematic component types from logs
+            var problematicTypes = new[]
+            {
+                "ActionsComponent", "ItemSlotsComponent", "InventoryComponent", "SlotManagerComponent",
+                "HandsComponent", "BodyComponent", "PlayerInputMoverComponent", "GhostComponent",
+                "MindComponent", "MovementSpeedModifierComponent", "InputMoverComponent",
+                "ActorComponent", "DamageableComponent", "ThermalRegulatorComponent", "FlammableComponent",
+                "DamageTriggerComponent", "AtmosDeviceComponent", "NodeContainerComponent",
+                "DeviceNetworkComponent", "StatusEffectsComponent", "BloodstreamComponent",
+                "FixtureComponent", "InventoryComponent", "RadioComponent", "InteractionOutlineComponent"
+            };
+
+            return problematicTypes.Contains(typeName);
         }
 
         private ComponentData? SerializeSolutionComponent(SolutionContainerManagerComponent solutionManager)
@@ -1153,6 +1178,40 @@ namespace Content.Server.Shuttles.Save
             catch (Exception ex)
             {
                 _sawmill.Warning($"Failed to serialize solution component: {ex.Message}");
+                return null;
+            }
+        }
+
+        private ComponentData? SerializePaperComponent(Content.Shared.Paper.PaperComponent paperComponent)
+        {
+            try
+            {
+                var paperData = new Dictionary<string, object>
+                {
+                    ["Content"] = paperComponent.Content ?? "",
+                    ["StampedBy"] = paperComponent.StampedBy?.Select(stamp => new Dictionary<string, object>
+                    {
+                        ["StampedName"] = stamp.StampedName ?? "",
+                        ["StampedColor"] = stamp.StampedColor.ToHex()
+                    }).Cast<object>().ToList() ?? new List<object>(),
+                    ["StampState"] = paperComponent.StampState ?? "",
+                    ["EditingDisabled"] = paperComponent.EditingDisabled
+                };
+
+                var componentData = new ComponentData
+                {
+                    Type = "PaperComponent",
+                    Properties = paperData,
+                    NetId = 0
+                };
+
+                if ((paperComponent.Content?.Length ?? 0) > 0)
+                    _sawmill.Info($"Serialized paper with {paperComponent.Content?.Length ?? 0} characters, {paperComponent.StampedBy?.Count ?? 0} stamps");
+                return componentData;
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Warning($"Failed to serialize paper component: {ex.Message}");
                 return null;
             }
         }
@@ -1238,15 +1297,54 @@ namespace Content.Server.Shuttles.Save
 
         private void RestoreEntityComponents(EntityUid entityUid, List<ComponentData> componentDataList)
         {
+            var restored = 0;
+            var failed = 0;
+            var skipped = 0;
+
             foreach (var componentData in componentDataList)
             {
                 try
                 {
+                    var componentTypes = _entityManager.ComponentFactory.GetAllRefTypes()
+                        .Select(idx => _entityManager.ComponentFactory.GetRegistration(idx).Type)
+                        .Where(t => t.Name == componentData.Type || t.Name.EndsWith($".{componentData.Type}"))
+                        .FirstOrDefault();
+
+                    if (componentTypes != null && IsProblematicComponent(componentTypes))
+                    {
+                        skipped++;
+                        continue;
+                    }
+
                     RestoreComponent(entityUid, componentData);
+                    restored++;
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Warning($"Failed to restore component {componentData.Type} on entity {entityUid}: {ex.Message}");
+                    failed++;
+                    // Reduce noise - only warn for important components
+                    var componentTypes = _entityManager.ComponentFactory.GetAllRefTypes()
+                        .Select(idx => _entityManager.ComponentFactory.GetRegistration(idx).Type)
+                        .Where(t => t.Name == componentData.Type || t.Name.EndsWith($".{componentData.Type}"))
+                        .FirstOrDefault();
+                        
+                    if (componentTypes != null && (IsImportantComponent(componentTypes) && !IsProblematicComponent(componentTypes)))
+                    {
+                        _sawmill.Warning($"Failed to restore important component {componentData.Type} on entity {entityUid}: {ex.Message}");
+                    }
+                    else
+                    {
+                        _sawmill.Debug($"Failed to restore component {componentData.Type} on entity {entityUid}");
+                    }
+                }
+            }
+
+            if (restored > 0 || failed > 0 || skipped > 0)
+            {
+                _sawmill.Info($"Entity {entityUid}: {restored} restored, {failed} failed, {skipped} skipped");
+                if (failed > 5) // Only warn if many failures
+                {
+                    _sawmill.Warning($"Entity {entityUid} had {failed} component restoration failures - entity may be incomplete");
                 }
             }
         }
@@ -1256,9 +1354,30 @@ namespace Content.Server.Shuttles.Save
             try
             {
                 // Special handling for solution components
-                if (componentData.Type == "SolutionContainerManagerComponent" && componentData.Properties.Any())
+                if (componentData.Type == "SolutionContainerManagerComponent")
                 {
-                    RestoreSolutionComponent(entityUid, componentData);
+                    if (componentData.Properties.Any())
+                    {
+                        RestoreSolutionComponent(entityUid, componentData);
+                    }
+                    else
+                    {
+                        _sawmill.Debug($"Solution component found but no Properties data - skipping restoration for entity {entityUid}");
+                    }
+                    return;
+                }
+
+                // Special handling for paper components
+                if (componentData.Type == "PaperComponent")
+                {
+                    if (componentData.Properties.Any())
+                    {
+                        RestorePaperComponent(entityUid, componentData);
+                    }
+                    else
+                    {
+                        _sawmill.Debug($"Paper component found but no Properties data - skipping restoration for entity {entityUid}");
+                    }
                     return;
                 }
 
@@ -1315,7 +1434,15 @@ namespace Content.Server.Shuttles.Save
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Warning($"Failed to populate component {componentData.Type} data: {ex.Message}");
+                    // Only warn for important components
+                    if (IsImportantComponent(componentType) && !IsProblematicComponent(componentType))
+                    {
+                        _sawmill.Warning($"Failed to populate important component {componentData.Type} data: {ex.Message}");
+                    }
+                    else
+                    {
+                        _sawmill.Debug($"Failed to populate component {componentData.Type} data");
+                    }
                     // Continue execution - partial restoration is better than none
                 }
             }
@@ -1386,11 +1513,73 @@ namespace Content.Server.Shuttles.Save
                     }
                 }
 
-                _sawmill.Info($"Restored {restoredSolutions} solutions on entity {entityUid}");
+                if (restoredSolutions > 0)
+                    _sawmill.Info($"Restored {restoredSolutions} chemical solutions on entity {entityUid}");
             }
             catch (Exception ex)
             {
                 _sawmill.Error($"Failed to restore solution component on entity {entityUid}: {ex.Message}");
+            }
+        }
+
+        private void RestorePaperComponent(EntityUid entityUid, ComponentData componentData)
+        {
+            try
+            {
+                if (!_entityManager.TryGetComponent<Content.Shared.Paper.PaperComponent>(entityUid, out var paperComponent))
+                {
+                    _sawmill.Warning($"Entity {entityUid} does not have PaperComponent to restore");
+                    return;
+                }
+
+                // Restore paper content
+                if (componentData.Properties.TryGetValue("Content", out var contentObj) && contentObj is string content)
+                {
+                    paperComponent.Content = content;
+                }
+
+                // Restore stamps
+                if (componentData.Properties.TryGetValue("StampedBy", out var stampsObj) && 
+                    stampsObj is List<object> stampsList)
+                {
+                    paperComponent.StampedBy.Clear();
+                    foreach (var stampObj in stampsList)
+                    {
+                        if (stampObj is Dictionary<string, object> stampDict)
+                        {
+                            var stampName = stampDict.GetValueOrDefault("StampedName", "")?.ToString() ?? "";
+                            var stampColorHex = stampDict.GetValueOrDefault("StampedColor", "#000000")?.ToString() ?? "#000000";
+                            
+                            if (Robust.Shared.Maths.Color.TryFromHex(stampColorHex) is Robust.Shared.Maths.Color stampColor)
+                            {
+                                paperComponent.StampedBy.Add(new Content.Shared.Paper.StampDisplayInfo
+                                {
+                                    StampedName = stampName,
+                                    StampedColor = stampColor
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Restore stamp state
+                if (componentData.Properties.TryGetValue("StampState", out var stampStateObj) && stampStateObj is string stampState)
+                {
+                    paperComponent.StampState = stampState;
+                }
+
+                // Restore editing disabled state
+                if (componentData.Properties.TryGetValue("EditingDisabled", out var editingDisabledObj) && editingDisabledObj is bool editingDisabled)
+                {
+                    paperComponent.EditingDisabled = editingDisabled;
+                }
+
+                if ((paperComponent.Content?.Length ?? 0) > 0)
+                    _sawmill.Info($"Restored paper with {paperComponent.Content?.Length ?? 0} characters, {paperComponent.StampedBy?.Count ?? 0} stamps");
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to restore paper component on entity {entityUid}: {ex.Message}");
             }
         }
 
@@ -1647,7 +1836,7 @@ namespace Content.Server.Shuttles.Save
                 var containedEntities = gridData.Entities.Where(e => e.IsContained).ToList();
                 var entityIds = gridData.Entities.Select(e => e.EntityId).ToHashSet();
 
-                _sawmill.Info($"Validating container relationships: {containerEntities.Count} containers, {containedEntities.Count} contained entities");
+                // Validating container relationships
 
                 var orphanedEntities = 0;
                 var invalidContainers = 0;
@@ -1690,7 +1879,7 @@ namespace Content.Server.Shuttles.Save
                 }
                 else
                 {
-                    _sawmill.Info("Container relationship validation passed successfully");
+                    // Container relationship validation passed
                 }
             }
             catch (Exception ex)
@@ -1737,7 +1926,7 @@ namespace Content.Server.Shuttles.Save
                 }
             }
             
-            _sawmill.Info($"Legacy reconstruction complete: {spawnedCount} entities spawned, {failedCount} failed");
+            // Legacy reconstruction complete
         }
 
         private void LogReconstructionStats(GridData gridData, Dictionary<string, EntityUid> entityIdMapping, int containedSpawned, int containedFailed)
@@ -1750,17 +1939,17 @@ namespace Content.Server.Shuttles.Save
                 var nonContainedEntities = gridData.Entities.Count(e => !e.IsContained);
                 var successfullyMapped = entityIdMapping.Count;
 
-                _sawmill.Info("=== Ship Reconstruction Statistics ===");
-                _sawmill.Info($"Total entities in save: {totalEntities}");
-                _sawmill.Info($"  - Non-contained entities: {nonContainedEntities}");
-                _sawmill.Info($"  - Contained entities: {containedEntities}");
-                _sawmill.Info($"  - Container entities: {containerEntities}");
-                _sawmill.Info($"Successfully spawned entities: {successfullyMapped}");
-                _sawmill.Info($"Contained entities inserted: {containedSpawned}");
-                _sawmill.Info($"Contained entities failed (placed on floor): {containedFailed}");
+                // Ship reconstruction statistics
+                // Total entities in save
+                // Non-contained entities
+                // Contained entities
+                // Container entities
+                // Successfully spawned entities
+                // Contained entities inserted
+                // Contained entities failed
                 
                 var successRate = totalEntities > 0 ? (float)(successfullyMapped) / totalEntities * 100 : 0;
-                _sawmill.Info($"Overall success rate: {successRate:F1}%");
+                _sawmill.Info($"Ship reconstruction: {successRate:F1}% entity success rate");
 
                 if (containedFailed > 0)
                 {

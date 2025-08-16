@@ -55,4 +55,58 @@ namespace Content.Shared.Shuttles.Save
             ShipNames = shipNames;
         }
     }
+
+    [Serializable, NetSerializable]
+    public sealed class AdminRequestPlayerShipsMessage : EntityEventArgs
+    {
+        public Guid PlayerId { get; }
+        public string AdminName { get; }
+
+        public AdminRequestPlayerShipsMessage(Guid playerId, string adminName)
+        {
+            PlayerId = playerId;
+            AdminName = adminName;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class AdminSendPlayerShipsMessage : EntityEventArgs
+    {
+        public List<(string filename, string shipName, DateTime timestamp, string checksum)> Ships { get; }
+        public string AdminName { get; }
+
+        public AdminSendPlayerShipsMessage(List<(string filename, string shipName, DateTime timestamp, string checksum)> ships, string adminName)
+        {
+            Ships = ships;
+            AdminName = adminName;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class AdminRequestShipDataMessage : EntityEventArgs
+    {
+        public string ShipFilename { get; }
+        public string AdminName { get; }
+
+        public AdminRequestShipDataMessage(string shipFilename, string adminName)
+        {
+            ShipFilename = shipFilename;
+            AdminName = adminName;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class AdminSendShipDataMessage : EntityEventArgs
+    {
+        public string ShipData { get; }
+        public string ShipFilename { get; }
+        public string AdminName { get; }
+
+        public AdminSendShipDataMessage(string shipData, string shipFilename, string adminName)
+        {
+            ShipData = shipData;
+            ShipFilename = shipFilename;
+            AdminName = adminName;
+        }
+    }
 }
