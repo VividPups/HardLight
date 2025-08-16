@@ -192,6 +192,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             }
 
             var shipName = shipGridData.Metadata.ShipName;
+            string finalShipName = shipName;
 
             // Set up station for the loaded ship exactly like purchased ships
             EntityUid? shuttleStation = null;
@@ -202,7 +203,8 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                     newShipGridUid
                 };
                 shuttleStation = _station.InitializeNewStation(stationProto.Stations[shipName], gridUids);
-                _sawmill.Info($"Created station {shuttleStation} from prototype for loaded ship {shipName}");
+                finalShipName = Name(shuttleStation.Value); // Use station name with prefix like purchased ships
+                _sawmill.Info($"Created station {shuttleStation} from prototype for loaded ship, final name: {finalShipName}");
 
                 var vesselInfo = EnsureComp<ExtraShuttleInformationComponent>(shuttleStation.Value);
                 vesselInfo.Vessel = shipName;
@@ -222,12 +224,12 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             // Add deed to the ID card in the console
             var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardInConsole.Value);
-            AssignShuttleDeedProperties((idCardInConsole.Value, deedComponent), newShipGridUid, shipName, playerSession.Name, false);
+            AssignShuttleDeedProperties((idCardInConsole.Value, deedComponent), newShipGridUid, finalShipName, playerSession.Name, false);
             _sawmill.Info($"Added deed to ID card in console {idCardInConsole.Value}");
 
             // Also add deed to the ship itself (like purchased ships) but mark as loaded (not purchasable)
             var shipDeedComponent = EnsureComp<ShuttleDeedComponent>(newShipGridUid);
-            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, shipName, playerSession.Name, true); // Mark as purchased with voucher to prevent sale
+            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, finalShipName, playerSession.Name, true); // Mark as purchased with voucher to prevent sale
 
             // Station information already set up above during station creation
 
@@ -235,10 +237,10 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             if (TryComp<ShipyardConsoleComponent>(targetConsole.Value, out var consoleComponent))
             {
                 var playerEntity = playerSession.AttachedEntity ?? EntityUid.Invalid;
-                SendLoadMessage(targetConsole.Value, playerEntity, shipName, consoleComponent.ShipyardChannel);
+                SendLoadMessage(targetConsole.Value, playerEntity, finalShipName, consoleComponent.ShipyardChannel);
                 if (consoleComponent.SecretShipyardChannel is { } secretChannel)
-                    SendLoadMessage(targetConsole.Value, playerEntity, shipName, secretChannel, secret: true);
-                _sawmill.Info($"Sent radio announcements for loaded ship {shipName}");
+                    SendLoadMessage(targetConsole.Value, playerEntity, finalShipName, secretChannel, secret: true);
+                _sawmill.Info($"Sent radio announcements for loaded ship {finalShipName}");
             }
 
             _sawmill.Info($"Successfully loaded and docked ship {shipGridData.Metadata.ShipName} for player {playerSession.Name}");
