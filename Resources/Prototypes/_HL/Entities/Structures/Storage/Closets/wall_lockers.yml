@@ -1,0 +1,29 @@
+- type: entity
+  id: LockerWallBluespace
+  parent: NFBaseLockerGridInvWallColor
+  name: Bluespace wall locker
+  suffix: null
+  description: Wall locker infused with bluespace tech. Designed by SESWC.
+  components:
+  - type: Sprite
+    sprite: _HL/Structures/Closets/Bluespace_wall_locker.rsi
+    layers:
+    - state: bluespace
+      map: ["enum.StorageVisualLayers.Base"]
+    - state: icon
+      map: ["enum.StorageVisualLayers.Door"]
+    - state: locked
+      map: ["enum.LockVisualLayers.Lock"]
+      shader: unshaded
+  - type: EntityStorageVisuals
+    stateBaseClosed: icon
+    stateBaseOpen: bluespace
+    stateDoorOpen: bluespace_open
+    stateDoorClosed: icon
+  - type: Storage
+    maxItemSize: Ginormous
+    grid:
+    - 0,0,19,9
+  - type: Construction
+    graph: LockerWallBluespace
+    node: done
