@@ -366,6 +366,52 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         catch (UnauthorizedAccessException e)
         {
             _sawmill.Error($"SECURITY: Unauthorized ship load attempt by {playerSession.Name}: {e.Message}");
+            
+            // Try to extract ship name from YAML for logging (basic parsing)
+            var shipDetails = "Unknown Ship";
+            try
+            {
+                if (message.YamlData.Contains("shipName:"))
+                {
+                    var lines = message.YamlData.Split('\n');
+                    var shipNameLine = lines.FirstOrDefault(l => l.Trim().StartsWith("shipName:"));
+                    if (shipNameLine != null)
+                    {
+                        var shipName = shipNameLine.Split(':')[1]?.Trim() ?? "Unknown";
+                        shipDetails = $"'{shipName}'";
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors, use default
+            }
+            
+            // Show in-character tamper detection message and play warning sound
+            var playerEntity = playerSession.AttachedEntity;
+            if (playerEntity.HasValue)
+            {
+                if (e.Message.Contains("checksum validation failed") || e.Message.Contains("tampered"))
+                {
+                    _popup.PopupEntity("SECURITY ALERT: Ship data integrity compromised! Tampering detected.", 
+                                     playerEntity.Value, playerEntity.Value, PopupType.LargeCaution);
+                    
+                    // Play warning buzz sound
+                    _audio.PlayPvs("/Audio/Machines/buzz_sigh.ogg", playerEntity.Value);
+                    
+                    // Log security violation and send admin alert with ship details
+                    _adminLogger.Add(LogType.ShipYardUsage, LogImpact.High, 
+                        $"SECURITY VIOLATION: Ship checksum tampering detected - Player {playerSession.Name} ({playerSession.UserId}) attempted to load tampered ship data for ship {shipDetails}");
+                    
+                    // Send alert to online admins via chat with ship details
+                    _chatManager.SendAdminAlert($"SHIP TAMPERING: {playerSession.Name} attempted to load ship {shipDetails} with invalid checksum (tampering detected)");
+                }
+                else
+                {
+                    _popup.PopupEntity($"Ship loading failed: {e.Message}", 
+                                     playerEntity.Value, playerEntity.Value, PopupType.LargeCaution);
+                }
+            }
         }
         catch (Exception e)
         {
