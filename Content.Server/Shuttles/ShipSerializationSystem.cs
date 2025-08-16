@@ -290,6 +290,10 @@ namespace Content.Server.Shuttles.Save
                 }
             }
 
+            // Restore original grid splitting setting
+            _gridFixture.SplitAllowed = originalSplitAllowed;
+            _sawmill.Debug("Restored grid splitting setting");
+
             return newGrid.Owner;
         }
 
@@ -303,6 +307,11 @@ namespace Content.Server.Shuttles.Save
 
             var primaryGridData = shipGridData.Grids[0];
             _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
+            
+            // Temporarily disable grid splitting to prevent ship from being cut up during reconstruction
+            var originalSplitAllowed = _gridFixture.SplitAllowed;
+            _gridFixture.SplitAllowed = false;
+            _sawmill.Debug("Disabled grid splitting for ship reconstruction");
             
             // Create a new map for the ship instead of using MapId.Nullspace
             _map.CreateMap(out var mapId);
@@ -393,6 +402,10 @@ namespace Content.Server.Shuttles.Save
                     throw;
                 }
             }
+
+            // Restore original grid splitting setting
+            _gridFixture.SplitAllowed = originalSplitAllowed;
+            _sawmill.Debug("Restored grid splitting setting");
 
             return newGrid.Owner;
         }
