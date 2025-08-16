@@ -6,8 +6,17 @@
     edges:
     - to: done
       steps:
-      - material: Steel
-        amount: 30
+      - material: Plasteel
+        amount: 10
+        icon:
+          sprite: Objects/Materials/Sheets/metal.rsi
+          state: plasteel_2
+        doAfter: 5
+      - material: BluespaceOre
+        amount: 5
+        doafter: 5
+      - material: Cable
+        amount: 5
         doAfter: 5
   - node: done
     entity: LockerWallBluespace
