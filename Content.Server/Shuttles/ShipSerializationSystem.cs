@@ -508,11 +508,6 @@ namespace Content.Server.Shuttles.Save
             
             foreach (var entityData in nonContainedEntities)
             {
-                if (string.IsNullOrEmpty(entityData.Prototype))
-                {
-                    // Skip entity with empty prototype
-                    continue;
-                }
 
                 try
                 {
@@ -535,17 +530,11 @@ namespace Content.Server.Shuttles.Save
             
             // Phase 2: Spawn contained entities and insert them into containers
             // Phase 2: Spawning contained entities
-            var containedEntities = primaryGridData.Entities.Where(e => e.IsContained).ToList();
             var containedSpawned = 0;
             var containedFailed = 0;
             
-            foreach (var entityData in containedEntities)
+            foreach (var entityData in containedEntitiesList)
             {
-                if (string.IsNullOrEmpty(entityData.Prototype))
-                {
-                    //_sawmill.Debug($"Skipping contained entity with empty prototype");
-                    continue;
-                }
 
                 try
                 {
@@ -857,25 +846,34 @@ namespace Content.Server.Shuttles.Save
                 }
                 checksumBuilder.Append(']');
                 
-                // Container relationship counts for tamper detection
-                var containerCount = sortedEntities.Count(e => e.IsContainer);
-                var containedCount = sortedEntities.Count(e => e.IsContained);
-                checksumBuilder.Append($":C{containerCount}x{containedCount}");
+                // Pre-calculate container counts and components in a single pass
+                var containerCount = 0;
+                var containedCount = 0;
+                var totalComponents = 0;
+                var componentTypes = new Dictionary<string, int>();
                 
-                // Component data integrity check - optimized
-                var totalComponents = sortedEntities.Sum(e => e.Components.Count);
+                foreach (var entity in sortedEntities)
+                {
+                    if (entity.IsContainer) containerCount++;
+                    if (entity.IsContained) containedCount++;
+                    totalComponents += entity.Components.Count;
+                    
+                    foreach (var component in entity.Components)
+                    {
+                        componentTypes[component.Type] = componentTypes.GetValueOrDefault(component.Type, 0) + 1;
+                    }
+                }
+                
+                checksumBuilder.Append($":C{containerCount}x{containedCount}");
                 checksumBuilder.Append($":CM{totalComponents}[");
-                var componentGroups = sortedEntities
-                    .SelectMany(e => e.Components)
-                    .GroupBy(c => c.Type)
-                    .OrderBy(g => g.Key)
-                    .Take(10);
+                
+                var componentGroups = componentTypes.OrderBy(kv => kv.Key).Take(10);
                 first = true;
                 foreach (var group in componentGroups)
                 {
                     if (!first) checksumBuilder.Append(',');
                     checksumBuilder.Append(group.Key.Substring(0, Math.Min(3, group.Key.Length)));
-                    checksumBuilder.Append(group.Count());
+                    checksumBuilder.Append(group.Value);
                     first = false;
                 }
                 checksumBuilder.Append(']');
@@ -1185,31 +1183,39 @@ namespace Content.Server.Shuttles.Save
         }
 
 
+        private static readonly Dictionary<Type, bool> ComponentSkipCache = new();
+        
         private bool ShouldSkipComponent(Type componentType)
         {
+            if (ComponentSkipCache.TryGetValue(componentType, out var cached))
+                return cached;
+                
             var typeName = componentType.Name;
+            
+            var shouldSkip = false;
             
             // Skip transform components (position handled separately)
             if (typeName == "TransformComponent")
-                return true;
+                shouldSkip = true;
                 
             // Skip metadata components (handled separately)
-            if (typeName == "MetaDataComponent")
-                return true;
+            else if (typeName == "MetaDataComponent")
+                shouldSkip = true;
                 
             // Skip physics components (usually regenerated)
-            if (typeName.Contains("Physics"))
-                return true;
+            else if (typeName.Contains("Physics"))
+                shouldSkip = true;
                 
             // Skip appearance/visual components (usually regenerated)
-            if (typeName.Contains("Appearance") || typeName.Contains("Sprite"))
-                return true;
+            else if (typeName.Contains("Appearance") || typeName.Contains("Sprite"))
+                shouldSkip = true;
 
             // Skip network/client-side components
-            if (typeName.Contains("Eye") || typeName.Contains("Input") || typeName.Contains("UserInterface"))
-                return true;
-
-            return false;
+            else if (typeName.Contains("Eye") || typeName.Contains("Input") || typeName.Contains("UserInterface"))
+                shouldSkip = true;
+                
+            ComponentSkipCache[componentType] = shouldSkip;
+            return shouldSkip;
         }
 
         private bool IsImportantComponent(Type componentType)
