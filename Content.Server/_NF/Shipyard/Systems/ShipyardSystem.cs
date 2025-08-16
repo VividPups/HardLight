@@ -29,7 +29,8 @@ using Robust.Shared.Log; // ADDED: For Logger
 
 // using Content.Shared._NF.Shipyard.Systems; // REMOVED: Not needed, SharedShipyardSystem is in Content.Shared._NF.Shipyard
 using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage
-using Content.Shared.IdCards.Components; // For IdCardComponent
+using Content.Shared.Access.Components; // For IdCardComponent
+using Robust.Shared.Map.Components; // For MapGridComponent
 
 namespace Content.Server._NF.Shipyard.Systems;
 
