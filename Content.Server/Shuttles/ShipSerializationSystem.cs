@@ -1125,7 +1125,7 @@ namespace Content.Server.Shuttles.Save
                 // Create a simplified representation of the solution data for better preservation
                 var solutionData = new Dictionary<string, object>();
                 
-                foreach (var (solutionName, solution) in solutionManager.Solutions)
+                foreach (var (solutionName, solution) in solutionManager.Solutions ?? new Dictionary<string, Solution>())
                 {
                     var solutionInfo = new Dictionary<string, object>
                     {
@@ -1309,7 +1309,7 @@ namespace Content.Server.Shuttles.Save
                 
                 try
                 {
-                    var temp = existingComponent;
+                    object? temp = existingComponent;
                     _serializationManager.CopyTo(node, ref temp);
                     _sawmill.Debug($"Restored component {componentData.Type} on entity {entityUid}");
                 }
@@ -1345,7 +1345,7 @@ namespace Content.Server.Shuttles.Save
                     try
                     {
                         // Get or create the solution
-                        if (!solutionManager.Solutions.TryGetValue(solutionName, out var solution))
+                        if (solutionManager.Solutions?.TryGetValue(solutionName, out var solution) != true || solution == null)
                         {
                             _sawmill.Warning($"Solution '{solutionName}' not found on entity {entityUid}");
                             continue;

@@ -14,14 +14,14 @@ namespace Content.Server.Shuttles;
 /// </summary>
 public sealed class ServerIdentityService
 {
-    [Dependency] private readonly ISawmill _sawmill = default!;
+    private ISawmill _sawmill = default!;
     
     private string? _cachedHardwareId;
     private readonly object _lock = new();
     
     public void Initialize()
     {
-        // Initialize the service
+        _sawmill = Logger.GetSawmill("server-identity");
     }
     
     /// <summary>

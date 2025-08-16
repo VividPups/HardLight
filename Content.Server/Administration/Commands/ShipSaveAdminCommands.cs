@@ -19,169 +19,101 @@ namespace Content.Server.Administration.Commands;
 [AdminCommand(AdminFlags.Admin)]
 public sealed class ShipSaveListCommand : IConsoleCommand
 {
-    [Dependency] private readonly IPlayerManager _playerManager = default!;
-    
     public string Command => "shipsave_list";
-    public string Description => "List all ship save files on the server";
-    public string Help => "shipsave_list [player_name]";
+    public string Description => "List blacklisted ship checksums (ships are stored client-side)";
+    public string Help => "shipsave_list";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
-        var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
-        var userDataPath = resourceManager.UserData.ToString() ?? "";
-        var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
-
-        if (!Directory.Exists(savedShipsPath))
+        shell.WriteLine("=== Ship Blacklist Status ===");
+        shell.WriteLine("Note: Ship save files are stored on player clients, not the server.");
+        shell.WriteLine("This command shows server-side blacklisted ships only.");
+        shell.WriteLine("");
+        
+        var blacklisted = ShipBlacklistService.GetAllBlacklisted().ToList();
+        
+        if (!blacklisted.Any())
         {
-            shell.WriteLine("No saved ships directory found.");
+            shell.WriteLine("📋 No ships are currently blacklisted.");
             return;
         }
 
-        var shipFiles = Directory.GetFiles(savedShipsPath, "*.yml");
-        if (shipFiles.Length == 0)
+        shell.WriteLine($"📋 Blacklisted Ships ({blacklisted.Count}):");
+        shell.WriteLine("");
+        
+        foreach (var (checksum, reason) in blacklisted)
         {
-            shell.WriteLine("No ship save files found.");
-            return;
+            var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+            shell.WriteLine($"🚫 {shortChecksum}");
+            shell.WriteLine($"   Reason: {reason}");
+            shell.WriteLine("");
         }
-
-        shell.WriteLine($"Found {shipFiles.Length} ship save files:");
-
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .Build();
-
-        var targetPlayer = args.Length > 0 ? args[0] : null;
-
-        foreach (var filePath in shipFiles)
-        {
-            try
-            {
-                var yamlContent = File.ReadAllText(filePath);
-                var shipData = deserializer.Deserialize<ShipGridData>(yamlContent);
-                var fileName = Path.GetFileName(filePath);
-
-                // Filter by player if specified
-                if (targetPlayer != null && !shipData.Metadata.PlayerId.Contains(targetPlayer, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var fileSize = new FileInfo(filePath).Length;
-                shell.WriteLine($"  {fileName}:");
-                shell.WriteLine($"    Ship Name: {shipData.Metadata.ShipName}");
-                shell.WriteLine($"    Player ID: {shipData.Metadata.PlayerId}");
-                shell.WriteLine($"    Timestamp: {shipData.Metadata.Timestamp:yyyy-MM-dd HH:mm:ss}");
-                shell.WriteLine($"    Checksum: {shipData.Metadata.Checksum}");
-                shell.WriteLine($"    File Size: {fileSize / 1024.0:F1} KB");
-                shell.WriteLine($"    Entities: {shipData.Grids.Sum(g => g.Entities.Count)}");
-                shell.WriteLine($"    Containers: {shipData.Grids.Sum(g => g.Entities.Count(e => e.IsContainer))}");
-                shell.WriteLine($"    Contained Items: {shipData.Grids.Sum(g => g.Entities.Count(e => e.IsContained))}");
-                
-                // Show blacklist status
-                if (ShipBlacklistService.IsBlacklisted(shipData.Metadata.Checksum))
-                {
-                    var reason = ShipBlacklistService.GetBlacklistReason(shipData.Metadata.Checksum);
-                    shell.WriteLine($"    🚫 BLACKLISTED: {reason}");
-                }
-                
-                shell.WriteLine("");
-            }
-            catch (Exception ex)
-            {
-                shell.WriteLine($"  {Path.GetFileName(filePath)}: ERROR - {ex.Message}");
-            }
-        }
+        
+        shell.WriteLine("Use 'shipsave_validate_checksum <checksum>' to validate a specific ship checksum.");
+        shell.WriteLine("Use 'shipsave_blacklist <checksum> <reason>' to blacklist a ship by checksum.");
     }
 }
 
 [AdminCommand(AdminFlags.Admin)]
-public sealed class ShipSaveInspectCommand : IConsoleCommand
+public sealed class ShipSaveValidateChecksumCommand : IConsoleCommand
 {
-    public string Command => "shipsave_inspect";
-    public string Description => "Inspect detailed information about a ship save file";
-    public string Help => "shipsave_inspect <filename>";
+    public string Command => "shipsave_validate_checksum";
+    public string Description => "Validate a ship checksum format and blacklist status";
+    public string Help => "shipsave_validate_checksum <checksum>";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
         if (args.Length == 0)
         {
-            shell.WriteLine("Usage: shipsave_inspect <filename>");
+            shell.WriteLine("Usage: shipsave_validate_checksum <checksum>");
+            shell.WriteLine("Note: Ship files are stored client-side. This validates checksum format only.");
             return;
         }
 
-        var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
-        var userDataPath = resourceManager.UserData.ToString() ?? "";
-        var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
-        var filePath = Path.Combine(savedShipsPath, args[0]);
-
-        if (!File.Exists(filePath))
+        var checksum = args[0];
+        
+        shell.WriteLine($"=== Checksum Validation ===");
+        shell.WriteLine($"Checksum: {checksum}");
+        shell.WriteLine("");
+        
+        // Analyze checksum format
+        if (checksum.StartsWith("S:"))
         {
-            shell.WriteLine($"Ship save file '{args[0]}' not found.");
-            return;
-        }
-
-        try
-        {
-            var yamlContent = File.ReadAllText(filePath);
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                .Build();
-            var shipData = deserializer.Deserialize<ShipGridData>(yamlContent);
-
-            shell.WriteLine($"=== Ship Save Inspection: {args[0]} ===");
-            shell.WriteLine($"Ship Name: {shipData.Metadata.ShipName}");
-            shell.WriteLine($"Player ID: {shipData.Metadata.PlayerId}");
-            shell.WriteLine($"Original Grid ID: {shipData.Metadata.OriginalGridId}");
-            shell.WriteLine($"Timestamp: {shipData.Metadata.Timestamp:yyyy-MM-dd HH:mm:ss UTC}");
-            shell.WriteLine($"Format Version: {shipData.Metadata.FormatVersion}");
-            shell.WriteLine($"Checksum: {shipData.Metadata.Checksum}");
-            shell.WriteLine("");
-
-            for (int gridIndex = 0; gridIndex < shipData.Grids.Count; gridIndex++)
+            shell.WriteLine("✅ Format: Server-bound checksum");
+            var parts = checksum.Split(':', 3);
+            if (parts.Length >= 3)
             {
-                var grid = shipData.Grids[gridIndex];
-                shell.WriteLine($"Grid {gridIndex + 1}:");
-                shell.WriteLine($"  Grid ID: {grid.GridId}");
-                shell.WriteLine($"  Tiles: {grid.Tiles.Count}");
-                shell.WriteLine($"  Total Entities: {grid.Entities.Count}");
-                shell.WriteLine($"  Container Entities: {grid.Entities.Count(e => e.IsContainer)}");
-                shell.WriteLine($"  Contained Entities: {grid.Entities.Count(e => e.IsContained)}");
-                shell.WriteLine($"  Has Atmosphere Data: {!string.IsNullOrEmpty(grid.AtmosphereData)}");
-                shell.WriteLine($"  Has Decal Data: {!string.IsNullOrEmpty(grid.DecalData)}");
-
-                // Component analysis
-                var componentTypes = grid.Entities
-                    .SelectMany(e => e.Components)
-                    .GroupBy(c => c.Type)
-                    .OrderByDescending(g => g.Count())
-                    .Take(10)
-                    .ToList();
-
-                if (componentTypes.Any())
-                {
-                    shell.WriteLine($"  Top Component Types:");
-                    foreach (var componentType in componentTypes)
-                    {
-                        shell.WriteLine($"    {componentType.Key}: {componentType.Count()}");
-                    }
-                }
-
-                // Entity prototype analysis
-                var entityTypes = grid.Entities
-                    .GroupBy(e => e.Prototype)
-                    .OrderByDescending(g => g.Count())
-                    .Take(10)
-                    .ToList();
-
-                shell.WriteLine($"  Top Entity Types:");
-                foreach (var entityType in entityTypes)
-                {
-                    shell.WriteLine($"    {entityType.Key}: {entityType.Count()}");
-                }
-                shell.WriteLine("");
+                shell.WriteLine($"   Server Binding: {parts[1]}");
+                shell.WriteLine($"   Base Checksum: {parts[2]}");
             }
         }
-        catch (Exception ex)
+        else if (checksum.Length == 64 && !checksum.Contains(":"))
         {
-            shell.WriteLine($"Failed to inspect ship save file: {ex.Message}");
+            shell.WriteLine("⚠️  Format: Legacy SHA256 checksum");
+        }
+        else if (checksum.Contains(":"))
+        {
+            shell.WriteLine("✅ Format: Enhanced checksum");
+            if (checksum.Contains(":C") && checksum.Contains(":CM"))
+            {
+                shell.WriteLine("   Includes: Container and component data");
+            }
+        }
+        else
+        {
+            shell.WriteLine("❓ Format: Unknown or invalid");
+        }
+        
+        // Check blacklist status
+        if (ShipBlacklistService.IsBlacklisted(checksum))
+        {
+            var reason = ShipBlacklistService.GetBlacklistReason(checksum);
+            shell.WriteLine($"🚫 Status: BLACKLISTED");
+            shell.WriteLine($"   Reason: {reason}");
+        }
+        else
+        {
+            shell.WriteLine("✅ Status: Not blacklisted");
         }
     }
 }
@@ -288,38 +220,136 @@ public sealed class ShipSaveValidateCommand : IConsoleCommand
 // ===== NEW BLACKLISTING SYSTEM =====
 
 /// <summary>
-/// Server-side ship blacklisting system for legal compliance
+/// Server-side ship blacklisting system for legal compliance with persistent storage
 /// </summary>
 public static class ShipBlacklistService
 {
     private static readonly HashSet<string> BlacklistedChecksums = new();
     private static readonly Dictionary<string, string> BlacklistReasons = new();
+    private static readonly object _lock = new();
+    private static string? _blacklistFilePath;
+    private static bool _initialized = false;
+    
+    private static void EnsureInitialized()
+    {
+        if (_initialized) return;
+        
+        lock (_lock)
+        {
+            if (_initialized) return;
+            
+            var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
+            var userDataPath = resourceManager.UserData.ToString() ?? "";
+            _blacklistFilePath = Path.Combine(userDataPath, "ship_blacklist.yml");
+            
+            LoadBlacklist();
+            _initialized = true;
+        }
+    }
     
     public static bool IsBlacklisted(string checksum)
     {
-        return BlacklistedChecksums.Contains(checksum);
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return BlacklistedChecksums.Contains(checksum);
+        }
     }
     
     public static void AddToBlacklist(string checksum, string reason)
     {
-        BlacklistedChecksums.Add(checksum);
-        BlacklistReasons[checksum] = reason;
+        EnsureInitialized();
+        lock (_lock)
+        {
+            BlacklistedChecksums.Add(checksum);
+            BlacklistReasons[checksum] = reason;
+            SaveBlacklist();
+        }
     }
     
     public static void RemoveFromBlacklist(string checksum)
     {
-        BlacklistedChecksums.Remove(checksum);
-        BlacklistReasons.Remove(checksum);
+        EnsureInitialized();
+        lock (_lock)
+        {
+            BlacklistedChecksums.Remove(checksum);
+            BlacklistReasons.Remove(checksum);
+            SaveBlacklist();
+        }
     }
     
     public static string? GetBlacklistReason(string checksum)
     {
-        return BlacklistReasons.TryGetValue(checksum, out var reason) ? reason : null;
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return BlacklistReasons.TryGetValue(checksum, out var reason) ? reason : null;
+        }
     }
     
     public static IEnumerable<(string checksum, string reason)> GetAllBlacklisted()
     {
-        return BlacklistedChecksums.Select(c => (c, BlacklistReasons.GetValueOrDefault(c, "No reason provided")));
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return BlacklistedChecksums.Select(c => (c, BlacklistReasons.GetValueOrDefault(c, "No reason provided"))).ToList();
+        }
+    }
+    
+    private static void LoadBlacklist()
+    {
+        try
+        {
+            if (!File.Exists(_blacklistFilePath))
+                return;
+                
+            var yamlContent = File.ReadAllText(_blacklistFilePath);
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+                
+            var blacklistData = deserializer.Deserialize<Dictionary<string, string>>(yamlContent);
+            
+            BlacklistedChecksums.Clear();
+            BlacklistReasons.Clear();
+            
+            foreach (var (checksum, reason) in blacklistData)
+            {
+                BlacklistedChecksums.Add(checksum);
+                BlacklistReasons[checksum] = reason;
+            }
+            
+            var sawmill = Logger.GetSawmill("ship-blacklist");
+            sawmill.Info($"Loaded {BlacklistedChecksums.Count} blacklisted ships from {_blacklistFilePath}");
+        }
+        catch (Exception ex)
+        {
+            var sawmill = Logger.GetSawmill("ship-blacklist");
+            sawmill.Error($"Failed to load blacklist from {_blacklistFilePath}: {ex.Message}");
+        }
+    }
+    
+    private static void SaveBlacklist()
+    {
+        try
+        {
+            var blacklistData = BlacklistReasons.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+                
+            var yamlContent = serializer.Serialize(blacklistData);
+            File.WriteAllText(_blacklistFilePath!, yamlContent);
+            
+            var sawmill = Logger.GetSawmill("ship-blacklist");
+            sawmill.Info($"Saved {BlacklistedChecksums.Count} blacklisted ships to {_blacklistFilePath}");
+        }
+        catch (Exception ex)
+        {
+            var sawmill = Logger.GetSawmill("ship-blacklist");
+            sawmill.Error($"Failed to save blacklist to {_blacklistFilePath}: {ex.Message}");
+        }
     }
 }
 
