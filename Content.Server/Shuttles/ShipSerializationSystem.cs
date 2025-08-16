@@ -128,7 +128,7 @@ namespace Content.Server.Shuttles.Save
                 _sawmill.Info("No decal component found on grid, decals will not be preserved");
             }
 
-            // Simplified entity serialization
+            // Simplified entity serialization - only entities directly on grid (not in containers)
             foreach (var entity in _entityManager.EntityQuery<TransformComponent>())
             {
                 if (entity.GridUid != gridId)
@@ -150,28 +150,19 @@ namespace Content.Server.Shuttles.Save
                 {
                     EntityId = uid.ToString(),
                     Prototype = proto,
-                    Position = entity.LocalPosition,
-                    Rotation = (float)entity.LocalRotation.Theta
+                    Position = new Vector2((float)Math.Round(entity.LocalPosition.X, 3), (float)Math.Round(entity.LocalPosition.Y, 3)),
+                    Rotation = (float)Math.Round(entity.LocalRotation.Theta, 3)
                 };
-
-                // Preserve anchored status
-                if (_entityManager.TryGetComponent<PhysicsComponent>(uid, out var physics))
-                {
-                    entityData.Components.Add(new ComponentData
-                    {
-                        Type = "Physics",
-                        Properties = new Dictionary<string, object>
-                        {
-                            ["IsAnchored"] = (physics.BodyType == BodyType.Static).ToString()
-                        }
-                    });
-                }
 
                 gridData.Entities.Add(entityData);
             }
 
             shipGridData.Grids.Add(gridData);
-            shipGridData.Metadata.Checksum = GenerateChecksum(shipGridData.Grids);
+            
+            // Generate checksum AFTER all data is finalized
+            var checksum = GenerateChecksum(shipGridData.Grids);
+            shipGridData.Metadata.Checksum = checksum;
+            _sawmill.Info($"Generated checksum for ship save: {checksum}");
 
             return shipGridData;
         }
@@ -196,12 +187,36 @@ namespace Content.Server.Shuttles.Save
                 throw;
             }
 
-            // Temporarily disable checksum validation until serialization consistency is resolved
-            // var actualChecksum = GenerateChecksum(data.Grids);
-            // if (data.Metadata.Checksum != actualChecksum)
-            // {
-            //     throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-            // }
+            // Store original checksum BEFORE any calculations
+            var originalStoredChecksum = data.Metadata.Checksum;
+            _sawmill.Info($"ORIGINAL stored checksum from file: {originalStoredChecksum}");
+            
+            // Calculate checksum from loaded data (this should NOT modify data.Metadata.Checksum)
+            var actualChecksum = GenerateChecksum(data.Grids);
+            
+            // Verify the stored checksum wasn't modified
+            if (data.Metadata.Checksum != originalStoredChecksum)
+            {
+                _sawmill.Error($"BUG: Stored checksum was modified during GenerateChecksum! Was: {originalStoredChecksum}, Now: {data.Metadata.Checksum}");
+            }
+            
+            _sawmill.Info($"Expected checksum: {originalStoredChecksum}");
+            _sawmill.Info($"Actual checksum: {actualChecksum}");
+            _sawmill.Debug($"Grid count: {data.Grids.Count}");
+            _sawmill.Debug($"Tile count: {data.Grids[0].Tiles.Count}");
+            _sawmill.Debug($"Entity count: {data.Grids[0].Entities.Count}");
+            
+            if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+            {
+                _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                _sawmill.Error($"Expected: {originalStoredChecksum}");
+                _sawmill.Error($"Actual: {actualChecksum}");
+                _sawmill.Error($"Ship data has been tampered with!");
+                _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+            }
+            
+            _sawmill.Info("Checksum validation passed successfully");
 
 
             if (data.Metadata.PlayerId != loadingPlayerId.ToString())
@@ -349,8 +364,6 @@ namespace Content.Server.Shuttles.Save
                         transform.LocalRotation = new Angle(entityData.Rotation);
                     }
 
-                    // Restore component states (like anchored status)
-                    RestoreEntityComponents(newEntity, entityData);
                     
                     _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype})");
                 }
@@ -500,8 +513,6 @@ namespace Content.Server.Shuttles.Save
                         transform.LocalRotation = new Angle(entityData.Rotation);
                     }
 
-                    // Restore component states (like anchored status)
-                    RestoreEntityComponents(newEntity, entityData);
                     
                     _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype})");
                 }
@@ -566,44 +577,45 @@ namespace Content.Server.Shuttles.Save
             });
         }
 
-        private void RestoreEntityComponents(EntityUid entity, EntityData entityData)
-        {
-            foreach (var componentData in entityData.Components)
-            {
-                if (componentData.Type == "Physics" && _entityManager.TryGetComponent<PhysicsComponent>(entity, out var physics))
-                {
-                    if (componentData.Properties.TryGetValue("IsAnchored", out var anchoredObj) 
-                        && anchoredObj is string anchoredStr 
-                        && bool.TryParse(anchoredStr, out var isAnchored))
-                    {
-                        // Skip setting anchored status for now due to access restrictions
-                        _sawmill.Debug($"Entity {entity} was {(isAnchored ? "anchored" : "unanchored")} in original save");
-                    }
-                }
-            }
-        }
 
         private string GenerateChecksum(List<GridData> grids)
         {
-            var checksumData = new List<object>();
+            // Create a simple, deterministic string for hashing
+            var checksumBuilder = new StringBuilder();
             
             foreach (var grid in grids)
             {
-                // Create deterministic checksum that excludes potentially non-deterministic decal data
-                checksumData.Add(new
+                checksumBuilder.AppendLine($"GRID:{grid.GridId}");
+                
+                // Add tiles in deterministic order
+                var sortedTiles = grid.Tiles.OrderBy(t => t.X).ThenBy(t => t.Y).ToList();
+                checksumBuilder.AppendLine($"TILES:{sortedTiles.Count}");
+                foreach (var tile in sortedTiles)
                 {
-                    Tiles = grid.Tiles.Select(t => new { t.X, t.Y, t.TileType }).OrderBy(t => t.X).ThenBy(t => t.Y),
-                    Entities = grid.Entities.Select(e => new { e.Prototype, e.Position, e.Rotation }).OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y),
-                    // Use simple hash of decal data string to avoid YAML serialization inconsistencies
-                    DecalDataHash = string.IsNullOrEmpty(grid.DecalData) ? "" : grid.DecalData.GetHashCode().ToString()
-                });
+                    checksumBuilder.AppendLine($"T:{tile.X},{tile.Y},{tile.TileType}");
+                }
+                
+                // Add entities in deterministic order
+                var sortedEntities = grid.Entities.OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y).ToList();
+                checksumBuilder.AppendLine($"ENTITIES:{sortedEntities.Count}");
+                foreach (var entity in sortedEntities)
+                {
+                    // Use exact values as they appear in the YAML
+                    checksumBuilder.AppendLine($"E:{entity.Prototype},{entity.Position.X:F3},{entity.Position.Y:F3},{entity.Rotation:F3}");
+                }
             }
             
-            var yamlString = _serializer.Serialize(checksumData);
+            var checksumString = checksumBuilder.ToString();
+            _sawmill.Info($"Checksum data for validation:");
+            _sawmill.Info($"Length: {checksumString.Length} chars");
+            _sawmill.Info($"Sample: {checksumString.Substring(0, Math.Min(300, checksumString.Length))}...");
+            
             using (var sha256 = SHA256.Create())
             {
-                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(yamlString));
-                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(checksumString));
+                var checksum = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                _sawmill.Info($"Final checksum: {checksum}");
+                return checksum;
             }
         }
     }
