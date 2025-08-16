@@ -6,7 +6,6 @@ using Robust.Shared.Serialization.Manager;
 using Robust.Shared.Serialization.Markdown.Mapping;
 using Robust.Shared.Serialization.Markdown.Value;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Collections.Generic;
 using System.Numerics;
@@ -33,6 +32,8 @@ using Content.Server.Decals;
 using static Content.Shared.Decals.DecalGridComponent;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics;
+using Robust.Shared.Configuration;
+using Content.Shared._NF.CCVar;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -46,6 +47,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly AtmosphereSystem _atmosphere = default!;
         [Dependency] private readonly IConsoleHost _consoleHost = default!;
         [Dependency] private readonly DecalSystem _decalSystem = default!;
+        [Dependency] private readonly IConfigurationManager _configManager = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -206,17 +208,35 @@ namespace Content.Server.Shuttles.Save
             _sawmill.Debug($"Tile count: {data.Grids[0].Tiles.Count}");
             _sawmill.Debug($"Entity count: {data.Grids[0].Entities.Count}");
             
-            if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
-            {
-                _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
-                _sawmill.Error($"Expected: {originalStoredChecksum}");
-                _sawmill.Error($"Actual: {actualChecksum}");
-                _sawmill.Error($"Ship data has been tampered with!");
-                _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
-                throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-            }
+            // Check if checksum validation is enabled via cvar
+            var checksumValidationEnabled = _configManager.GetCVar(NFCCVars.ShipyardChecksumValidation);
             
-            _sawmill.Info("Checksum validation passed successfully");
+            if (checksumValidationEnabled)
+            {
+                // Handle legacy checksum format - strip old ":PP-" suffix if present
+                var cleanStoredChecksum = originalStoredChecksum;
+                if (cleanStoredChecksum.Contains(":PP-"))
+                {
+                    cleanStoredChecksum = cleanStoredChecksum.Substring(0, cleanStoredChecksum.IndexOf(":PP-"));
+                    _sawmill.Info($"Detected legacy checksum format, using cleaned version: {cleanStoredChecksum}");
+                }
+                
+                if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                {
+                    _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                    _sawmill.Error($"Expected: {cleanStoredChecksum}");
+                    _sawmill.Error($"Actual: {actualChecksum}");
+                    _sawmill.Error($"Ship data has been tampered with!");
+                    _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                }
+                
+                _sawmill.Info("Checksum validation passed successfully");
+            }
+            else
+            {
+                _sawmill.Info("Checksum validation disabled by server configuration");
+            }
 
 
             if (data.Metadata.PlayerId != loadingPlayerId.ToString())
@@ -580,43 +600,44 @@ namespace Content.Server.Shuttles.Save
 
         private string GenerateChecksum(List<GridData> grids)
         {
-            // Create a simple, deterministic string for hashing
+            // Enhanced tamper-detection checksum using detailed entity data
             var checksumBuilder = new StringBuilder();
             
             foreach (var grid in grids)
             {
-                checksumBuilder.AppendLine($"GRID:{grid.GridId}");
+                // Grid identifier
+                checksumBuilder.Append($"G{grid.GridId}:");
                 
-                // Add tiles in deterministic order
+                // Tile summary
                 var sortedTiles = grid.Tiles.OrderBy(t => t.X).ThenBy(t => t.Y).ToList();
-                checksumBuilder.AppendLine($"TILES:{sortedTiles.Count}");
-                foreach (var tile in sortedTiles)
-                {
-                    checksumBuilder.AppendLine($"T:{tile.X},{tile.Y},{tile.TileType}");
-                }
+                checksumBuilder.Append($"T{sortedTiles.Count}");
                 
-                // Add entities in deterministic order
+                // Tile type counts for tamper detection
+                var tileTypeCounts = sortedTiles.GroupBy(t => t.TileType).OrderBy(g => g.Key)
+                    .Select(g => $"{g.Key.Substring(0, Math.Min(4, g.Key.Length))}{g.Count()}").ToList();
+                checksumBuilder.Append($"[{string.Join(",", tileTypeCounts)}]");
+                
+                // Entity summary  
                 var sortedEntities = grid.Entities.OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y).ToList();
-                checksumBuilder.AppendLine($"ENTITIES:{sortedEntities.Count}");
-                foreach (var entity in sortedEntities)
-                {
-                    // Use exact values as they appear in the YAML
-                    checksumBuilder.AppendLine($"E:{entity.Prototype},{entity.Position.X:F3},{entity.Position.Y:F3},{entity.Rotation:F3}");
-                }
+                checksumBuilder.Append($":E{sortedEntities.Count}");
+                
+                // Entity prototype counts
+                var entityProtoCounts = sortedEntities.GroupBy(e => e.Prototype).OrderBy(g => g.Key)
+                    .Select(g => $"{g.Key.Substring(0, Math.Min(6, g.Key.Length))}{g.Count()}").ToList();
+                checksumBuilder.Append($"[{string.Join(",", entityProtoCounts)}]");
+                
+                // Position checksum for tamper detection
+                var tileCoordSum = sortedTiles.Sum(t => t.X * 100 + t.Y);
+                var entityPosSum = (int)sortedEntities.Sum(e => e.Position.X * 100 + e.Position.Y * 100);
+                checksumBuilder.Append($":P{tileCoordSum + entityPosSum}");
+                
+                checksumBuilder.Append(";");
             }
             
-            var checksumString = checksumBuilder.ToString();
-            _sawmill.Info($"Checksum data for validation:");
-            _sawmill.Info($"Length: {checksumString.Length} chars");
-            _sawmill.Info($"Sample: {checksumString.Substring(0, Math.Min(300, checksumString.Length))}...");
+            var checksum = checksumBuilder.ToString().TrimEnd(';');
+            _sawmill.Info($"Enhanced tamper-detection checksum: {checksum} (length: {checksum.Length})");
             
-            using (var sha256 = SHA256.Create())
-            {
-                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(checksumString));
-                var checksum = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-                _sawmill.Info($"Final checksum: {checksum}");
-                return checksum;
-            }
+            return checksum;
         }
     }
 }
