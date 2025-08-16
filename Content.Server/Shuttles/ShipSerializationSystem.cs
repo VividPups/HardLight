@@ -60,6 +60,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IServerNetManager _netManager = default!;
         [Dependency] private readonly SharedContainerSystem _containerSystem = default!;
         [Dependency] private readonly ServerIdentityService _serverIdentity = default!;
+        [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -1131,10 +1132,10 @@ namespace Content.Server.Shuttles.Save
                         ["Volume"] = solution.Volume,
                         ["MaxVolume"] = solution.MaxVolume,
                         ["Temperature"] = solution.Temperature,
-                        ["Reagents"] = solution.Contents.ToDictionary(
+                        ["Reagents"] = solution.Contents?.ToDictionary(
                             reagent => reagent.Reagent.Prototype, 
                             reagent => (object)reagent.Quantity
-                        )
+                        ) ?? new Dictionary<string, object>()
                     };
                     solutionData[solutionName] = solutionInfo;
                 }
@@ -1367,7 +1368,7 @@ namespace Content.Server.Shuttles.Save
                                 if (quantityObj is double quantity && quantity > 0)
                                 {
                                     // Add the reagent back to the solution
-                                    solution.AddReagent(reagentId, (float)quantity);
+                                    solution?.AddReagent(reagentId, (float)quantity);
                                 }
                             }
                         }
@@ -1625,7 +1626,8 @@ namespace Content.Server.Shuttles.Save
                 
                 // Check if position is occupied (basic check)
                 var lookup = _entityManager.System<EntityLookupSystem>();
-                var entitiesAtPos = lookup.GetEntitiesIntersecting(coords, 0.1f);
+                var mapCoords = coords.ToMap(_entityManager, _transformSystem);
+                var entitiesAtPos = lookup.GetEntitiesIntersecting(mapCoords.MapId, new Box2(testPos - Vector2.One * 0.1f, testPos + Vector2.One * 0.1f));
                 if (!entitiesAtPos.Any())
                 {
                     return testPos;
