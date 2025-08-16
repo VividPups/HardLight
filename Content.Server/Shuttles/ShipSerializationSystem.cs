@@ -1267,6 +1267,7 @@ namespace Content.Server.Shuttles.Save
 
                 // Filter out components that shouldn't be restored
                 var componentTypes = _entityManager.ComponentFactory.GetAllRefTypes()
+                    .Select(idx => _entityManager.ComponentFactory.GetRegistration(idx).Type)
                     .Where(t => t.Name == componentData.Type || t.Name.EndsWith($".{componentData.Type}"))
                     .ToList();
 
