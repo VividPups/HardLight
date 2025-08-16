@@ -8,9 +8,6 @@
       steps:
       - material: Plasteel
         amount: 10
-        icon:
-          sprite: Objects/Materials/Sheets/metal.rsi
-          state: plasteel_2
         doAfter: 5
       - material: BluespaceOre
         amount: 5
@@ -30,7 +27,13 @@
         welded: false
       completed:
       - !type:SpawnPrototype
-        prototype: SheetSteel1
-        amount: 4
+        prototype: Plasteel
+        amount: 10
+      - !type:SpawnPrototype
+        prototype: BluespaceOre
+        amount: 5
+      - !type:SpawnPrototype
+        prototype: Cable
+        amount: 5
       - !type:EmptyAllContainers
       - !type:DeleteEntity
