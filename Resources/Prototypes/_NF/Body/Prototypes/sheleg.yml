@@ -14,10 +14,10 @@
     torso:
       part: TorsoSheleg
       connections:
-      - right_arm
-      - left_arm
-      - right_leg
-      - left_leg
+      - right arm
+      - left arm
+      - right leg
+      - left leg
       - head
       organs:
         heart: OrganShelegHeart
@@ -26,27 +26,27 @@
         liver: OrganShelegLiver
         kidneys: OrganShelegKidneys
         dermis: OrganCrescentDummy
-    right_arm:
+    right arm:
       part: RightArmSheleg
       connections:
-      - right_hand
-    left_arm:
+      - right hand
+    left arm:
       part: LeftArmSheleg
       connections:
-      - left_hand
-    right_hand:
+      - left hand
+    right hand:
       part: RightHandSheleg
-    left_hand:
+    left hand:
       part: LeftHandSheleg
-    right_leg:
+    right leg:
       part: RightLegSheleg
       connections:
-      - right_foot
-    left_leg:
+      - right foot
+    left leg:
       part: LeftLegSheleg
       connections:
-      - left_foot
-    right_foot:
+      - left foot
+    right foot:
       part: RightFootSheleg
-    left_foot:
+    left foot:
       part: LeftFootSheleg

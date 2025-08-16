@@ -217,9 +217,9 @@
 
 - type: entity
   id: WeaponRifleSVS
-  name: SVS-42 (7.62x54mmR)
+  name: SVT-42 (7.62x54mmR)
   parent: [ BaseWeaponRifle, BaseGunMelee, BaseC1Contraband ]
-  description: "Originally designed by Samonov, this old surplus rifle looks like it's seen a few wars. Uses low capacity 10 rounder 7.62x54mmR magazines. Equipped with bayonet."
+  description: "Originally designed by SESWC, this old surplus rifle looks like it's seen a few wars. Uses low capacity 10 rounder 7.62x54mmR magazines. Equipped with bayonet."  #Hardlight
   components:
   - type: Sprite
     sprite: _NF/Objects/Weapons/Guns/Rifles/svs42.rsi
@@ -235,10 +235,11 @@
     - Back
     - suitStorage
   - type: Gun
-    fireRate: 1.9
+    fireRate: 5  # highly underpower so buff  Hardlight
     selectedMode: SemiAuto
     availableModes:
       - SemiAuto
+      - FullAuto
     soundGunshot:
       path: /Audio/Weapons/Guns/Gunshots/rifle2.ogg
   - type: ChamberMagazineAmmoProvider

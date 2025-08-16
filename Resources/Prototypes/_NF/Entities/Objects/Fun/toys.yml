@@ -552,11 +552,11 @@
     state: white
 
 - type: entity
-  name: toy rocket launcher
+  name: Emotional support RPG
   parent: [BaseClearContraband, NFWeaponLauncherRocket]
   id: WeaponLauncherRocketToy
   suffix: Toy
-  description: A plush toy, this launches foam "grenades". There are stitches on the side that spell out "SAM".
+  description: A plush toy, this launches foam "grenades". Design by SESWC  # Hardlight
   components:
   - type: Sprite
     sprite: _NF/Objects/Fun/emotional_support_rpg.rsi

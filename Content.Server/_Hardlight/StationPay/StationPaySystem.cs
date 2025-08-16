@@ -25,7 +25,7 @@ public sealed class StationPaySystem : EntitySystem
     [Dependency] private readonly ISharedPlayerManager _player = default!;
 
     // TODO: this should probably be a cvar
-    private const int PayoutDelay = 3600;
+    private const int PayoutDelay = 1200;
 
     // map of {Mind.OwnedEntity: lastPayoutTime} where lastPayoutTime was the round duration at time of payout
     // sorted in ascending order
