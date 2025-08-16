@@ -69,54 +69,25 @@ public sealed class ShipSaveListCommand : IConsoleCommand
                 shell.WriteLine($"    Ship Name: {shipData.Metadata.ShipName}");
                 shell.WriteLine($"    Player ID: {shipData.Metadata.PlayerId}");
                 shell.WriteLine($"    Timestamp: {shipData.Metadata.Timestamp:yyyy-MM-dd HH:mm:ss}");
+                shell.WriteLine($"    Checksum: {shipData.Metadata.Checksum}");
                 shell.WriteLine($"    File Size: {fileSize / 1024.0:F1} KB");
                 shell.WriteLine($"    Entities: {shipData.Grids.Sum(g => g.Entities.Count)}");
                 shell.WriteLine($"    Containers: {shipData.Grids.Sum(g => g.Entities.Count(e => e.IsContainer))}");
                 shell.WriteLine($"    Contained Items: {shipData.Grids.Sum(g => g.Entities.Count(e => e.IsContained))}");
+                
+                // Show blacklist status
+                if (ShipBlacklistService.IsBlacklisted(shipData.Metadata.Checksum))
+                {
+                    var reason = ShipBlacklistService.GetBlacklistReason(shipData.Metadata.Checksum);
+                    shell.WriteLine($"    🚫 BLACKLISTED: {reason}");
+                }
+                
                 shell.WriteLine("");
             }
             catch (Exception ex)
             {
                 shell.WriteLine($"  {Path.GetFileName(filePath)}: ERROR - {ex.Message}");
             }
-        }
-    }
-}
-
-[AdminCommand(AdminFlags.Admin)]
-public sealed class ShipSaveDeleteCommand : IConsoleCommand
-{
-    public string Command => "shipsave_delete";
-    public string Description => "Delete a ship save file";
-    public string Help => "shipsave_delete <filename>";
-
-    public void Execute(IConsoleShell shell, string argStr, string[] args)
-    {
-        if (args.Length == 0)
-        {
-            shell.WriteLine("Usage: shipsave_delete <filename>");
-            return;
-        }
-
-        var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
-        var userDataPath = resourceManager.UserData.ToString() ?? "";
-        var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
-        var filePath = Path.Combine(savedShipsPath, args[0]);
-
-        if (!File.Exists(filePath))
-        {
-            shell.WriteLine($"Ship save file '{args[0]}' not found.");
-            return;
-        }
-
-        try
-        {
-            File.Delete(filePath);
-            shell.WriteLine($"Successfully deleted ship save file '{args[0]}'");
-        }
-        catch (Exception ex)
-        {
-            shell.WriteLine($"Failed to delete ship save file: {ex.Message}");
         }
     }
 }
@@ -314,124 +285,211 @@ public sealed class ShipSaveValidateCommand : IConsoleCommand
     }
 }
 
-[AdminCommand(AdminFlags.Admin)]
-public sealed class ShipSaveCleanupCommand : IConsoleCommand
+// ===== NEW BLACKLISTING SYSTEM =====
+
+/// <summary>
+/// Server-side ship blacklisting system for legal compliance
+/// </summary>
+public static class ShipBlacklistService
 {
-    public string Command => "shipsave_cleanup";
-    public string Description => "Clean up old or corrupted ship save files";
-    public string Help => "shipsave_cleanup [--dry-run] [--older-than-days=30]";
+    private static readonly HashSet<string> BlacklistedChecksums = new();
+    private static readonly Dictionary<string, string> BlacklistReasons = new();
+    
+    public static bool IsBlacklisted(string checksum)
+    {
+        return BlacklistedChecksums.Contains(checksum);
+    }
+    
+    public static void AddToBlacklist(string checksum, string reason)
+    {
+        BlacklistedChecksums.Add(checksum);
+        BlacklistReasons[checksum] = reason;
+    }
+    
+    public static void RemoveFromBlacklist(string checksum)
+    {
+        BlacklistedChecksums.Remove(checksum);
+        BlacklistReasons.Remove(checksum);
+    }
+    
+    public static string? GetBlacklistReason(string checksum)
+    {
+        return BlacklistReasons.TryGetValue(checksum, out var reason) ? reason : null;
+    }
+    
+    public static IEnumerable<(string checksum, string reason)> GetAllBlacklisted()
+    {
+        return BlacklistedChecksums.Select(c => (c, BlacklistReasons.GetValueOrDefault(c, "No reason provided")));
+    }
+}
+
+[AdminCommand(AdminFlags.Admin)]
+public sealed class ShipBlacklistCommand : IConsoleCommand
+{
+    public string Command => "shipsave_blacklist";
+    public string Description => "Add a ship to the server blacklist (prevents loading)";
+    public string Help => "shipsave_blacklist <filename_or_checksum> [reason]";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
-        var dryRun = args.Any(arg => arg == "--dry-run");
-        var olderThanDays = 30;
-        
-        foreach (var arg in args)
+        if (args.Length == 0)
         {
-            if (arg.StartsWith("--older-than-days="))
-            {
-                if (int.TryParse(arg.Substring("--older-than-days=".Length), out var days))
-                {
-                    olderThanDays = days;
-                }
-            }
-        }
-
-        var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
-        var userDataPath = resourceManager.UserData.ToString() ?? "";
-        var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
-
-        if (!Directory.Exists(savedShipsPath))
-        {
-            shell.WriteLine("No saved ships directory found.");
+            shell.WriteLine("Usage: shipsave_blacklist <filename_or_checksum> [reason]");
+            shell.WriteLine("Examples:");
+            shell.WriteLine("  shipsave_blacklist suspicious_ship.yml \"Dev environment exploit\"");
+            shell.WriteLine("  shipsave_blacklist S:a1b2c3d4:G1T50... \"Manual checksum blacklist\"");
             return;
         }
 
-        var shipFiles = Directory.GetFiles(savedShipsPath, "*.yml");
-        var cutoffDate = DateTime.UtcNow.AddDays(-olderThanDays);
-        var toDelete = new List<string>();
-        var corrupted = new List<string>();
+        var input = args[0];
+        var reason = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "Blacklisted by admin";
+        string checksum;
 
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .Build();
-
-        foreach (var filePath in shipFiles)
+        // Check if input looks like a filename
+        if (input.EndsWith(".yml") && !input.Contains(":"))
         {
+            // Try to find and read the file to get its checksum
+            var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
+            var userDataPath = resourceManager.UserData.ToString() ?? "";
+            var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
+            var filePath = Path.Combine(savedShipsPath, input);
+
+            if (!File.Exists(filePath))
+            {
+                shell.WriteLine($"❌ Ship file '{input}' not found.");
+                return;
+            }
+
             try
             {
-                var fileInfo = new FileInfo(filePath);
-                
-                // Check if file is older than cutoff
-                if (fileInfo.LastWriteTimeUtc < cutoffDate)
-                {
-                    toDelete.Add(filePath);
-                    continue;
-                }
-
-                // Check if file is corrupted
                 var yamlContent = File.ReadAllText(filePath);
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .Build();
                 var shipData = deserializer.Deserialize<ShipGridData>(yamlContent);
+                checksum = shipData.Metadata.Checksum;
                 
-                // Basic corruption checks
-                if (string.IsNullOrEmpty(shipData.Metadata.ShipName) ||
-                    string.IsNullOrEmpty(shipData.Metadata.PlayerId) ||
-                    !shipData.Grids.Any())
-                {
-                    corrupted.Add(filePath);
-                }
+                shell.WriteLine($"📄 Found ship: {shipData.Metadata.ShipName}");
+                shell.WriteLine($"👤 Player: {shipData.Metadata.PlayerId}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                corrupted.Add(filePath);
-            }
-        }
-
-        shell.WriteLine($"=== Ship Save Cleanup Analysis ===");
-        shell.WriteLine($"Old files (>{olderThanDays} days): {toDelete.Count}");
-        shell.WriteLine($"Corrupted files: {corrupted.Count}");
-        shell.WriteLine($"Total files to remove: {toDelete.Count + corrupted.Count}");
-
-        if (dryRun)
-        {
-            shell.WriteLine("DRY RUN - No files will be deleted");
-            
-            if (toDelete.Any())
-            {
-                shell.WriteLine("\nOld files that would be deleted:");
-                foreach (var file in toDelete)
-                {
-                    shell.WriteLine($"  {Path.GetFileName(file)}");
-                }
-            }
-
-            if (corrupted.Any())
-            {
-                shell.WriteLine("\nCorrupted files that would be deleted:");
-                foreach (var file in corrupted)
-                {
-                    shell.WriteLine($"  {Path.GetFileName(file)}");
-                }
+                shell.WriteLine($"❌ Failed to read ship file: {ex.Message}");
+                return;
             }
         }
         else
         {
-            var deletedCount = 0;
-            
-            foreach (var file in toDelete.Concat(corrupted))
+            // Assume it's a checksum
+            checksum = input;
+        }
+
+        ShipBlacklistService.AddToBlacklist(checksum, reason);
+        
+        var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+        shell.WriteLine($"✅ Ship blacklisted: {shortChecksum}");
+        shell.WriteLine($"📝 Reason: {reason}");
+        shell.WriteLine($"🛡️ This ship will no longer load on the server");
+    }
+}
+
+[AdminCommand(AdminFlags.Admin)]
+public sealed class ShipUnblacklistCommand : IConsoleCommand
+{
+    public string Command => "shipsave_unblacklist";
+    public string Description => "Remove a ship from the server blacklist";
+    public string Help => "shipsave_unblacklist <filename_or_checksum>";
+
+    public void Execute(IConsoleShell shell, string argStr, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            shell.WriteLine("Usage: shipsave_unblacklist <filename_or_checksum>");
+            shell.WriteLine("Examples:");
+            shell.WriteLine("  shipsave_unblacklist suspicious_ship.yml");
+            shell.WriteLine("  shipsave_unblacklist S:a1b2c3d4:G1T50...");
+            return;
+        }
+
+        var input = args[0];
+        string checksum;
+
+        // Check if input looks like a filename
+        if (input.EndsWith(".yml") && !input.Contains(":"))
+        {
+            // Try to find and read the file to get its checksum
+            var resourceManager = IoCManager.Resolve<Robust.Shared.ContentPack.IResourceManager>();
+            var userDataPath = resourceManager.UserData.ToString() ?? "";
+            var savedShipsPath = Path.Combine(userDataPath, "saved_ships");
+            var filePath = Path.Combine(savedShipsPath, input);
+
+            if (!File.Exists(filePath))
             {
-                try
-                {
-                    File.Delete(file);
-                    deletedCount++;
-                }
-                catch (Exception ex)
-                {
-                    shell.WriteLine($"Failed to delete {Path.GetFileName(file)}: {ex.Message}");
-                }
+                shell.WriteLine($"❌ Ship file '{input}' not found.");
+                return;
             }
 
-            shell.WriteLine($"Successfully deleted {deletedCount} ship save files");
+            try
+            {
+                var yamlContent = File.ReadAllText(filePath);
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .Build();
+                var shipData = deserializer.Deserialize<ShipGridData>(yamlContent);
+                checksum = shipData.Metadata.Checksum;
+            }
+            catch (Exception ex)
+            {
+                shell.WriteLine($"❌ Failed to read ship file: {ex.Message}");
+                return;
+            }
+        }
+        else
+        {
+            // Assume it's a checksum
+            checksum = input;
+        }
+        
+        if (!ShipBlacklistService.IsBlacklisted(checksum))
+        {
+            var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+            shell.WriteLine($"❌ Ship not found in blacklist: {shortChecksum}");
+            return;
+        }
+
+        ShipBlacklistService.RemoveFromBlacklist(checksum);
+        var shortChecksumResult = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+        shell.WriteLine($"✅ Ship removed from blacklist: {shortChecksumResult}");
+        shell.WriteLine($"🔓 This ship can now load on the server again");
+    }
+}
+
+[AdminCommand(AdminFlags.Admin)]
+public sealed class ShipBlacklistListCommand : IConsoleCommand
+{
+    public string Command => "shipsave_blacklist_list";
+    public string Description => "List all blacklisted ship checksums";
+    public string Help => "shipsave_blacklist_list";
+
+    public void Execute(IConsoleShell shell, string argStr, string[] args)
+    {
+        var blacklisted = ShipBlacklistService.GetAllBlacklisted().ToList();
+        
+        if (!blacklisted.Any())
+        {
+            shell.WriteLine("📋 No ships are currently blacklisted.");
+            return;
+        }
+
+        shell.WriteLine($"📋 Blacklisted Ships ({blacklisted.Count}):");
+        shell.WriteLine("");
+        
+        foreach (var (checksum, reason) in blacklisted)
+        {
+            var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
+            shell.WriteLine($"🚫 {shortChecksum}");
+            shell.WriteLine($"   Reason: {reason}");
+            shell.WriteLine("");
         }
     }
 }

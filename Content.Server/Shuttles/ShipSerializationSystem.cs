@@ -33,9 +33,11 @@ using static Content.Shared.Decals.DecalGridComponent;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics;
 using Robust.Shared.Configuration;
+using System.Security.Cryptography;
 using Content.Shared._NF.CCVar;
 using Robust.Shared.Player;
 using Robust.Server.Player;
+using Content.Server.Administration.Commands;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.Components.SolutionManager;
 using Content.Shared.Paper;
@@ -57,6 +59,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IConfigurationManager _configManager = default!;
         [Dependency] private readonly IServerNetManager _netManager = default!;
         [Dependency] private readonly SharedContainerSystem _containerSystem = default!;
+        [Dependency] private readonly ServerIdentityService _serverIdentity = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -181,10 +184,10 @@ namespace Content.Server.Shuttles.Save
                 }
             }
             
-            // Generate checksum AFTER all data is finalized
-            var checksum = GenerateChecksum(shipGridData.Grids);
+            // Generate server-bound checksum AFTER all data is finalized
+            var checksum = GenerateServerBoundChecksum(shipGridData);
             shipGridData.Metadata.Checksum = checksum;
-            _sawmill.Info($"Generated checksum for ship save: {checksum}");
+            _sawmill.Info($"Generated server-bound checksum for ship save: {checksum}");
 
             return shipGridData;
         }
@@ -219,41 +222,68 @@ namespace Content.Server.Shuttles.Save
             var originalStoredChecksum = data.Metadata.Checksum;
             _sawmill.Info($"ORIGINAL stored checksum from file: {originalStoredChecksum}");
             
-            // Calculate checksum from loaded data (this should NOT modify data.Metadata.Checksum)
-            var actualChecksum = GenerateChecksum(data.Grids);
-            
-            // Verify the stored checksum wasn't modified
-            if (data.Metadata.Checksum != originalStoredChecksum)
+            // Check if this is a server-bound checksum
+            if (originalStoredChecksum.StartsWith("S:"))
             {
-                _sawmill.Error($"BUG: Stored checksum was modified during GenerateChecksum! Was: {originalStoredChecksum}, Now: {data.Metadata.Checksum}");
-            }
-            
-            _sawmill.Info($"Expected checksum: {originalStoredChecksum}");
-            _sawmill.Info($"Actual checksum: {actualChecksum}");
-            _sawmill.Debug($"Grid count: {data.Grids.Count}");
-            _sawmill.Debug($"Tile count: {data.Grids[0].Tiles.Count}");
-            _sawmill.Debug($"Entity count: {data.Grids[0].Entities.Count}");
-            
-            // Check if checksum validation is enabled via cvar
-            var checksumValidationEnabled = _configManager.GetCVar(NFCCVars.ShipyardChecksumValidation);
-            
-            if (checksumValidationEnabled)
-            {
-                // Detect checksum format and handle appropriately
-                bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
-                bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
-                bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
-                bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
-                
-                if (isLegacySHA)
+                // Check blacklist first
+                if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
                 {
-                    // Legacy SHA256 checksum - regenerate current checksum and update file metadata for future saves
-                    _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum}");
-                    _sawmill.Warning($"This ship will be automatically converted to use the new checksum format");
-                    _sawmill.Info($"Current checksum would be: {actualChecksum}");
+                    var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
+                    _sawmill.Error($"Ship is blacklisted: {reason}");
+                    throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
+                }
+                
+                // Validate server-bound checksum
+                var isValid = ValidateServerBoundChecksum(originalStoredChecksum, data);
+                if (!isValid)
+                {
+                    throw new UnauthorizedAccessException("Server-bound checksum validation failed!");
+                }
+            }
+            else
+            {
+                // Check blacklist for legacy checksums too
+                if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
+                {
+                    var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
+                    _sawmill.Error($"Ship is blacklisted: {reason}");
+                    throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
+                }
+                // Legacy checksum validation
+                var actualChecksum = GenerateChecksum(data.Grids);
+                
+                // Verify the stored checksum wasn't modified
+                if (data.Metadata.Checksum != originalStoredChecksum)
+                {
+                    _sawmill.Error($"BUG: Stored checksum was modified during GenerateChecksum! Was: {originalStoredChecksum}, Now: {data.Metadata.Checksum}");
+                }
+                
+                _sawmill.Info($"Expected checksum: {originalStoredChecksum}");
+                _sawmill.Info($"Actual checksum: {actualChecksum}");
+                _sawmill.Debug($"Grid count: {data.Grids.Count}");
+                _sawmill.Debug($"Tile count: {data.Grids[0].Tiles.Count}");
+                _sawmill.Debug($"Entity count: {data.Grids[0].Entities.Count}");
+                
+                // Check if checksum validation is enabled via cvar
+                var checksumValidationEnabled = _configManager.GetCVar(NFCCVars.ShipyardChecksumValidation);
+            
+                if (checksumValidationEnabled)
+                {
+                    // Detect checksum format and handle appropriately
+                    bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
+                    bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
+                    bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
+                    bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
                     
-                    // Update the metadata with new checksum for conversion
-                    data.Metadata.Checksum = actualChecksum;
+                    if (isLegacySHA)
+                    {
+                        // Legacy SHA256 checksum - regenerate current checksum and update file metadata for future saves
+                        _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum}");
+                        _sawmill.Warning($"This ship will be automatically converted to use the new checksum format");
+                        _sawmill.Info($"Current checksum would be: {actualChecksum}");
+                        
+                        // Update the metadata with new checksum for conversion
+                        data.Metadata.Checksum = actualChecksum;
                     wasLegacyConverted = true;
                     _sawmill.Info("Legacy checksum compatibility mode - validation passed, marked for conversion");
                 }
@@ -321,10 +351,11 @@ namespace Content.Server.Shuttles.Save
                         _sawmill.Info("Unknown format checksum validation passed");
                     }
                 }
-            }
-            else
-            {
-                _sawmill.Info("Checksum validation disabled by server configuration");
+                }
+                else
+                {
+                    _sawmill.Info("Checksum validation disabled by server configuration");
+                }
             }
 
 
@@ -875,6 +906,67 @@ namespace Content.Server.Shuttles.Save
             
             return checksum;
         }
+        
+        private string GenerateServerBoundChecksum(ShipGridData data)
+        {
+            var baseChecksum = GenerateChecksum(data.Grids);
+            var serverHardwareId = _serverIdentity.GetServerHardwareId();
+            
+            // Create server binding hash (use 8 chars for shorter length)
+            var serverBinding = ComputeSha256Hash($"{serverHardwareId}:{baseChecksum}");
+            var serverBindingShort = serverBinding.Substring(0, 8);
+            
+            var serverBoundChecksum = $"S:{serverBindingShort}:{baseChecksum}";
+            
+            _sawmill.Info($"Generated server-bound checksum with binding: {serverBindingShort}");
+            return serverBoundChecksum;
+        }
+        
+        private bool ValidateServerBoundChecksum(string storedChecksum, ShipGridData data)
+        {
+            var parts = storedChecksum.Split(':', 3);
+            if (parts.Length < 3 || parts[0] != "S")
+            {
+                _sawmill.Error("Invalid server-bound checksum format");
+                return false;
+            }
+            
+            var storedServerBinding = parts[1];
+            var storedBaseChecksum = parts[2];
+            
+            // Calculate actual base checksum
+            var actualBaseChecksum = GenerateChecksum(data.Grids);
+            
+            // Verify base checksum first
+            if (!string.Equals(storedBaseChecksum, actualBaseChecksum, StringComparison.OrdinalIgnoreCase))
+            {
+                _sawmill.Error("Base checksum validation failed - ship data has been tampered with");
+                _sawmill.Error($"Expected: {storedBaseChecksum}");
+                _sawmill.Error($"Actual: {actualBaseChecksum}");
+                return false;
+            }
+            
+            // Verify server binding
+            var currentServerHardwareId = _serverIdentity.GetServerHardwareId();
+            var expectedBinding = ComputeSha256Hash($"{currentServerHardwareId}:{storedBaseChecksum}");
+            
+            if (!expectedBinding.StartsWith(storedServerBinding))
+            {
+                _sawmill.Error("Server binding validation failed! Ship was saved on a different server and cannot be loaded here for security reasons.");
+                _sawmill.Error($"This prevents loading ships created in development environments on production servers.");
+                return false;
+            }
+            
+            _sawmill.Info("Server-bound checksum validation passed successfully");
+            return true;
+        }
+        
+        private static string ComputeSha256Hash(string input)
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
 
         public string GetConvertedLegacyShipYaml(ShipGridData shipData, string playerName, string originalYamlString)
         {
@@ -1215,7 +1307,8 @@ namespace Content.Server.Shuttles.Save
                 
                 try
                 {
-                    _serializationManager.PopulateDataDefinition(existingComponent, node);
+                    var temp = existingComponent;
+                    _serializationManager.CopyTo(node, ref temp);
                     _sawmill.Debug($"Restored component {componentData.Type} on entity {entityUid}");
                 }
                 catch (Exception ex)
@@ -1531,7 +1624,8 @@ namespace Content.Server.Shuttles.Save
                 var coords = new EntityCoordinates(gridEntity, testPos);
                 
                 // Check if position is occupied (basic check)
-                var entitiesAtPos = _entityManager.GetEntitiesIntersecting(coords, 0.1f);
+                var lookup = _entityManager.System<EntityLookupSystem>();
+                var entitiesAtPos = lookup.GetEntitiesIntersecting(coords, 0.1f);
                 if (!entitiesAtPos.Any())
                 {
                     return testPos;
