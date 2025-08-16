@@ -6,8 +6,8 @@
     edges:
     - to: done
       steps:
-      - material: BluespaceOre1
-        amount: 5
+      - material: Platsteel
+        amount: 30
         doAfter: 5
   - node: done
     entity: LockerWallBluespace
