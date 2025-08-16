@@ -308,6 +308,7 @@ namespace Content.Client.Shuttles.Save
 
         public List<string> GetSavedShipFiles()
         {
+            /*
             Logger.Info($"GetSavedShipFiles called on Instance #{_instanceId}: returning {_staticAvailableShips.Count} ships");
             Logger.Info($"Cache contains {_staticCachedShipData.Count} cached ships");
             foreach (var ship in _staticAvailableShips)
@@ -317,7 +318,7 @@ namespace Content.Client.Shuttles.Save
             foreach (var cached in _staticCachedShipData.Keys)
             {
                 Logger.Info($"  - Cached: {cached}");
-            }
+            }*/
             // Return list of ships available from server and cached locally
             return new List<string>(_staticAvailableShips);
         }

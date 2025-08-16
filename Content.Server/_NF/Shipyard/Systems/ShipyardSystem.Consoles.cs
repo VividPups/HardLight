@@ -836,7 +836,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         TryParseShuttleName(deed.Comp, shuttleName!);
         deed.Comp.ShuttleOwner = shuttleOwner;
         deed.Comp.PurchasedWithVoucher = purchasedWithVoucher;
-        Dirty(deed);
+        // Note: Removed Dirty() call to prevent networking error on non-networked components
     }
 
     private void OnInitDeedSpawner(EntityUid uid, StationDeedSpawnerComponent component, MapInitEvent args)

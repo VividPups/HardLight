@@ -35,17 +35,17 @@ public sealed class ShipSaveListCommand : IConsoleCommand
         
         if (!blacklisted.Any())
         {
-            shell.WriteLine("📋 No ships are currently blacklisted.");
+            shell.WriteLine("No ships are currently blacklisted.");
             return;
         }
 
-        shell.WriteLine($"📋 Blacklisted Ships ({blacklisted.Count}):");
+        shell.WriteLine($"Blacklisted Ships ({blacklisted.Count}):");
         shell.WriteLine("");
         
         foreach (var (checksum, reason) in blacklisted)
         {
             var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
-            shell.WriteLine($"🚫 {shortChecksum}");
+            shell.WriteLine($"Ship: {shortChecksum}");
             shell.WriteLine($"   Reason: {reason}");
             shell.WriteLine("");
         }
@@ -80,7 +80,7 @@ public sealed class ShipSaveValidateChecksumCommand : IConsoleCommand
         // Analyze checksum format
         if (checksum.StartsWith("S:"))
         {
-            shell.WriteLine("✅ Format: Server-bound checksum");
+            shell.WriteLine("Format: Server-bound checksum");
             var parts = checksum.Split(':', 3);
             if (parts.Length >= 3)
             {
@@ -90,11 +90,11 @@ public sealed class ShipSaveValidateChecksumCommand : IConsoleCommand
         }
         else if (checksum.Length == 64 && !checksum.Contains(":"))
         {
-            shell.WriteLine("⚠️  Format: Legacy SHA256 checksum");
+            shell.WriteLine("Format: Legacy SHA256 checksum");
         }
         else if (checksum.Contains(":"))
         {
-            shell.WriteLine("✅ Format: Enhanced checksum");
+            shell.WriteLine("Format: Enhanced checksum");
             if (checksum.Contains(":C") && checksum.Contains(":CM"))
             {
                 shell.WriteLine("   Includes: Container and component data");
@@ -102,19 +102,19 @@ public sealed class ShipSaveValidateChecksumCommand : IConsoleCommand
         }
         else
         {
-            shell.WriteLine("❓ Format: Unknown or invalid");
+            shell.WriteLine("Format: Unknown or invalid");
         }
         
         // Check blacklist status
         if (ShipBlacklistService.IsBlacklisted(checksum))
         {
             var reason = ShipBlacklistService.GetBlacklistReason(checksum);
-            shell.WriteLine($"🚫 Status: BLACKLISTED");
+            shell.WriteLine($"Status: BLACKLISTED");
             shell.WriteLine($"   Reason: {reason}");
         }
         else
         {
-            shell.WriteLine("✅ Status: Not blacklisted");
+            shell.WriteLine("Status: Not blacklisted");
         }
     }
 }
@@ -124,20 +124,90 @@ public sealed class ShipSaveValidateCommand : IConsoleCommand
 {
     public string Command => "shipsave_validate";
     public string Description => "Validate ship save file integrity and checksums (ships are client-side)";
-    public string Help => "shipsave_validate <filename> - NOTE: Ships stored client-side only";
+    public string Help => "shipsave_validate <player> <ship_id> OR shipsave_validate <player:filename>";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
         if (args.Length == 0)
         {
-            shell.WriteLine("Usage: shipsave_validate <filename>");
-            shell.WriteLine("NOTE: Ships are stored CLIENT-SIDE only in player's export folder");
-            shell.WriteLine("This command cannot access player ship files directly");
-            shell.WriteLine("Use 'shipsave_validate_checksum <checksum>' instead");
+            shell.WriteLine("Usage: shipsave_validate <player> <ship_id>");
+            shell.WriteLine("       shipsave_validate <player:filename>");
+            shell.WriteLine("Examples:");
+            shell.WriteLine("  shipsave_validate BlueNexa a1b2c3d4");
+            shell.WriteLine("  shipsave_validate john:MyShip_20250816_143022.yml");
+            shell.WriteLine("");
+            shell.WriteLine("Use 'shipsave_player_list [player]' to see ship IDs");
             return;
         }
 
-        // First try to parse as player:filename format
+        // Check if this is the new format: player ship_id
+        if (args.Length >= 2 && args[1].Length == 8 && !args[1].Contains(":"))
+        {
+            // New format: shipsave_validate player ship_id
+            var playerIdentifier = args[0];
+            var shipId = args[1];
+            
+            var performer = shell.Player ?? throw new InvalidOperationException("Shell must have a player");
+            
+            if (!CommandUtils.TryGetSessionByUsernameOrId(shell, playerIdentifier, performer, out var session))
+            {
+                return;
+            }
+
+            var adminName = performer.Name;
+            var key = $"validate_ship_{adminName}_{shipId}";
+            
+            // Capture variables for callback closure
+            var capturedAdminName = adminName;
+            var capturedShipId = shipId;
+            var capturedSessionName = session.Name;
+            
+            // Register callback to handle the player's ship data response
+            Content.Server.Shuttles.Save.ShipSaveSystem.RegisterAdminRequest(key, result => 
+            {
+                // Try to find the ship checksum from cached data
+                var fullChecksum = Content.Server.Shuttles.Save.ShipSaveSystem.FindPlayerShipByBinding(capturedAdminName, capturedSessionName, capturedShipId);
+                
+                if (fullChecksum != null)
+                {
+                    try
+                    {
+                        var shipSerializationSystem = IoCManager.Resolve<ShipSerializationSystem>();
+                        var validatedData = shipSerializationSystem.DeserializeShipGridDataFromYaml(result, session.UserId, out var wasConverted);
+                        
+                        shell.WriteLine($"=== Validation Results for Ship ID {capturedShipId} ===");
+                        shell.WriteLine($"YAML parsing: SUCCESS");
+                        shell.WriteLine($"Checksum validation: SUCCESS");
+                        if (wasConverted)
+                        {
+                            shell.WriteLine($"Legacy format detected and converted");
+                        }
+                        shell.WriteLine($"Structure validation: SUCCESS");
+                        shell.WriteLine($"Ship: {validatedData.Metadata.ShipName}");
+                        shell.WriteLine($"Entities: {validatedData.Grids[0].Entities.Count}");
+                        shell.WriteLine($"Tiles: {validatedData.Grids[0].Tiles.Count}");
+                    }
+                    catch (Exception ex)
+                    {
+                        shell.WriteLine($"VALIDATION FAILED: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    shell.WriteLine($"Ship with ID {capturedShipId} not found for player {capturedSessionName}");
+                    shell.WriteLine("Use 'shipsave_player_list' to see available ships");
+                }
+            });
+
+            // Request player's ships first
+            var shipSaveSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<Content.Server.Shuttles.Save.ShipSaveSystem>();
+            shipSaveSystem.SendAdminRequestPlayerShips(session.UserId, adminName, session);
+            
+            shell.WriteLine($"Requesting ship data from {session.Name} to validate ship ID {shipId}...");
+            return;
+        }
+
+        // Try to parse as player:filename format
         var parts = args[0].Split(':', 2);
         if (parts.Length == 2)
         {
@@ -191,9 +261,11 @@ public sealed class ShipSaveValidateCommand : IConsoleCommand
         }
         else
         {
-            shell.WriteLine("Usage: shipsave_validate <player:filename>");
-            shell.WriteLine("Example: shipsave_validate john:MyShip_20250816_143022.yml");
-            shell.WriteLine("Requests ship file from player's client for validation");
+            shell.WriteLine("Usage: shipsave_validate <player> <ship_id>");
+            shell.WriteLine("       shipsave_validate <player:filename>");
+            shell.WriteLine("Examples:");
+            shell.WriteLine("  shipsave_validate BlueNexa a1b2c3d4");
+            shell.WriteLine("  shipsave_validate john:MyShip_20250816_143022.yml");
         }
     }
 }
@@ -207,9 +279,11 @@ public static class ShipBlacklistService
 {
     private static readonly HashSet<string> BlacklistedChecksums = new();
     private static readonly Dictionary<string, string> BlacklistReasons = new();
+    private static readonly Dictionary<string, (string checksum, string playerName, string filename)> RecentShipAttempts = new();
     private static readonly object _lock = new();
     private static string? _blacklistFilePath;
     private static bool _initialized = false;
+    private static int _attemptIdCounter = 1;
     
     private static void EnsureInitialized()
     {
@@ -237,6 +311,42 @@ public static class ShipBlacklistService
         }
     }
     
+    public static string? ExtractServerBinding(string checksum)
+    {
+        if (checksum.StartsWith("S:"))
+        {
+            var parts = checksum.Split(':', 3);
+            return parts.Length >= 2 ? parts[1] : null;
+        }
+        return null;
+    }
+    
+    public static string? FindChecksumByServerBinding(string serverBinding)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return BlacklistedChecksums.FirstOrDefault(c => c.StartsWith($"S:{serverBinding}:"));
+        }
+    }
+    
+    public static (string? checksum, int matchCount) FindChecksumByPartial(string partialChecksum)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            // Try server binding first (8 chars)
+            if (partialChecksum.Length == 8 && !partialChecksum.Contains(":"))
+            {
+                var byBinding = FindChecksumByServerBinding(partialChecksum);
+                return byBinding != null ? (byBinding, 1) : (null, 0);
+            }
+            
+            var matches = BlacklistedChecksums.Where(c => c.Contains(partialChecksum)).ToList();
+            return matches.Count == 1 ? (matches[0], 1) : (null, matches.Count);
+        }
+    }
+    
     public static void AddToBlacklist(string checksum, string reason)
     {
         EnsureInitialized();
@@ -245,6 +355,79 @@ public static class ShipBlacklistService
             BlacklistedChecksums.Add(checksum);
             BlacklistReasons[checksum] = reason;
             SaveBlacklist();
+        }
+    }
+    
+    public static void AddFilenameToBlacklist(string filename, string reason)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            // Use filename as identifier - simpler than checksum
+            BlacklistedChecksums.Add($"FILENAME:{filename}");
+            BlacklistReasons[$"FILENAME:{filename}"] = reason;
+            SaveBlacklist();
+        }
+    }
+    
+    public static bool IsFilenameBlacklisted(string filename)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return BlacklistedChecksums.Contains($"FILENAME:{filename}");
+        }
+    }
+    
+    public static void RemoveFilenameFromBlacklist(string filename)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            BlacklistedChecksums.Remove($"FILENAME:{filename}");
+            BlacklistReasons.Remove($"FILENAME:{filename}");
+            SaveBlacklist();
+        }
+    }
+    
+    public static string LogShipAttempt(string checksum, string playerName, string filename)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            var attemptId = _attemptIdCounter++.ToString();
+            RecentShipAttempts[attemptId] = (checksum, playerName, filename);
+            
+            // Keep only last 50 attempts to avoid memory bloat
+            if (RecentShipAttempts.Count > 50)
+            {
+                var oldestKey = RecentShipAttempts.Keys.OrderBy(k => int.Parse(k)).First();
+                RecentShipAttempts.Remove(oldestKey);
+            }
+            
+            return attemptId;
+        }
+    }
+    
+    public static (string? checksum, string? playerName, string? filename) GetAttemptById(string attemptId)
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return RecentShipAttempts.TryGetValue(attemptId, out var attempt) 
+                ? (attempt.checksum, attempt.playerName, attempt.filename) 
+                : (null, null, null);
+        }
+    }
+    
+    public static IEnumerable<(string id, string checksum, string playerName, string filename)> GetRecentAttempts()
+    {
+        EnsureInitialized();
+        lock (_lock)
+        {
+            return RecentShipAttempts.Select(kvp => (kvp.Key, kvp.Value.checksum, kvp.Value.playerName, kvp.Value.filename))
+                .OrderByDescending(x => int.Parse(x.Key))
+                .ToList();
         }
     }
     
@@ -338,44 +521,93 @@ public static class ShipBlacklistService
 public sealed class ShipBlacklistCommand : IConsoleCommand
 {
     public string Command => "shipsave_blacklist";
-    public string Description => "Add a ship to the server blacklist by checksum (prevents loading)";
-    public string Help => "shipsave_blacklist <checksum> [reason]";
+    public string Description => "Add a ship to the server blacklist by player and ship ID (prevents loading)";
+    public string Help => "shipsave_blacklist <player> <ship_id> [reason] OR shipsave_blacklist <full_checksum> [reason]";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
         if (args.Length == 0)
         {
-            shell.WriteLine("Usage: shipsave_blacklist <checksum> [reason]");
+            shell.WriteLine("Usage: shipsave_blacklist <player> <ship_id> [reason]");
+            shell.WriteLine("       shipsave_blacklist <full_checksum> [reason]");
             shell.WriteLine("Examples:");
-            shell.WriteLine("  shipsave_blacklist S:a1b2c3d4:G1T50... \"Manual checksum blacklist\"");
+            shell.WriteLine("  shipsave_blacklist BlueNexa a1b2c3d4 exploit ship");
+            shell.WriteLine("  shipsave_blacklist S:a1b2c3d4:G1T50... exploit ship");
             shell.WriteLine("");
-            shell.WriteLine("NOTE: Ships are stored client-side only.");
-            shell.WriteLine("Use checksums from ship loading attempts or 'shipsave_validate_checksum'");
+            shell.WriteLine("Use 'shipsave_player_list [player]' to see ship IDs");
             return;
         }
 
-        var checksum = args[0];
-        var reason = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "Blacklisted by admin";
-
-        // Validate checksum format
-        if (checksum.Length < 10 || (!checksum.Contains(":") && checksum.Length != 64))
+        // Check if this is the new format: player ship_id reason
+        if (args.Length >= 2 && args[1].Length == 8 && !args[1].Contains(":"))
         {
-            shell.WriteLine("Invalid checksum format. Checksums should be:");
-            shell.WriteLine("  - Enhanced format: G1:T50[types]:E10[prototypes]:P1234");
-            shell.WriteLine("  - Server-bound: S:binding:enhanced_checksum");
-            shell.WriteLine("  - Legacy SHA256: 64 character hex string");
+            // New format: shipsave_blacklist player ship_id reason
+            var playerIdentifier = args[0];
+            var shipId = args[1];
+            var reason = args.Length > 2 ? string.Join(" ", args.Skip(2)) : "Blacklisted by admin";
+            
+            var performer = shell.Player ?? throw new InvalidOperationException("Shell must have a player");
+            
+            if (!CommandUtils.TryGetSessionByUsernameOrId(shell, playerIdentifier, performer, out var session))
+            {
+                return;
+            }
+
+            var adminName = performer.Name;
+            var key = $"blacklist_ship_{adminName}_{shipId}";
+            
+            // Capture variables for callback closure
+            var capturedReason = reason;
+            var capturedAdminName = adminName;
+            var capturedShipId = shipId;
+            var capturedSessionName = session.Name;
+            
+            // Register callback to handle the player's ship data response
+            Content.Server.Shuttles.Save.ShipSaveSystem.RegisterAdminRequest(key, result => 
+            {
+                // Try to find the ship checksum from cached data
+                var fullChecksum = Content.Server.Shuttles.Save.ShipSaveSystem.FindPlayerShipByBinding(capturedAdminName, capturedSessionName, capturedShipId);
+                
+                if (fullChecksum != null)
+                {
+                    ShipBlacklistService.AddToBlacklist(fullChecksum, capturedReason);
+                    
+                    // Audit log
+                    Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {capturedAdminName} blacklisted {capturedSessionName}'s ship with ID {capturedShipId} - Reason: {capturedReason}");
+                    
+                    var shortChecksum = fullChecksum.Length > 30 ? fullChecksum.Substring(0, 30) + "..." : fullChecksum;
+                    shell.WriteLine($"Blacklisted {capturedSessionName}'s ship with ID {capturedShipId}");
+                    shell.WriteLine($"Checksum: {shortChecksum}");
+                    shell.WriteLine($"Reason: {capturedReason}");
+                }
+                else
+                {
+                    shell.WriteLine($"Ship with ID {capturedShipId} not found for player {capturedSessionName}");
+                    shell.WriteLine("Use 'shipsave_player_list' to see available ships");
+                }
+            });
+
+            // Request player's ships first
+            var shipSaveSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<Content.Server.Shuttles.Save.ShipSaveSystem>();
+            shipSaveSystem.SendAdminRequestPlayerShips(session.UserId, adminName, session);
+            
+            shell.WriteLine($"Requesting ship data from {session.Name} to blacklist ship ID {shipId}...");
             return;
         }
+        
+        // Fallback to old format: single checksum argument
+        var checksum = args[0];
+        var fallbackReason = args.Length > 1 ? string.Join(" ", args.Skip(1)) : "Blacklisted by admin";
 
-        ShipBlacklistService.AddToBlacklist(checksum, reason);
+        ShipBlacklistService.AddToBlacklist(checksum, fallbackReason);
         
         // Audit log
-        var adminName = (shell.Player?.Name ?? "Console");
-        Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {adminName} blacklisted ship checksum {checksum} - Reason: {reason}");
+        var fallbackAdminName = (shell.Player?.Name ?? "Console");
+        Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {fallbackAdminName} blacklisted ship checksum {checksum} - Reason: {fallbackReason}");
         
         var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
         shell.WriteLine($"Ship blacklisted: {shortChecksum}");
-        shell.WriteLine($"Reason: {reason}");
+        shell.WriteLine($"Reason: {fallbackReason}");
         shell.WriteLine($"This ship will no longer load on the server");
     }
 }
@@ -384,22 +616,84 @@ public sealed class ShipBlacklistCommand : IConsoleCommand
 public sealed class ShipUnblacklistCommand : IConsoleCommand
 {
     public string Command => "shipsave_unblacklist";
-    public string Description => "Remove a ship from the server blacklist by checksum";
-    public string Help => "shipsave_unblacklist <checksum>";
+    public string Description => "Remove a ship from the server blacklist by player and ship ID";
+    public string Help => "shipsave_unblacklist <player> <ship_id> OR shipsave_unblacklist <full_checksum>";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
     {
         if (args.Length == 0)
         {
-            shell.WriteLine("Usage: shipsave_unblacklist <checksum>");
+            shell.WriteLine("Usage: shipsave_unblacklist <player> <ship_id>");
+            shell.WriteLine("       shipsave_unblacklist <full_checksum>");
             shell.WriteLine("Examples:");
+            shell.WriteLine("  shipsave_unblacklist BlueNexa a1b2c3d4");
             shell.WriteLine("  shipsave_unblacklist S:a1b2c3d4:G1T50...");
             shell.WriteLine("");
-            shell.WriteLine("NOTE: Ships are stored client-side only.");
-            shell.WriteLine("Use checksums from 'shipsave_blacklist_list' or ship loading attempts");
+            shell.WriteLine("Use 'shipsave_player_list [player]' to see ship IDs");
             return;
         }
 
+        // Check if this is the new format: player ship_id
+        if (args.Length >= 2 && args[1].Length == 8 && !args[1].Contains(":"))
+        {
+            // New format: shipsave_unblacklist player ship_id
+            var playerIdentifier = args[0];
+            var shipId = args[1];
+            
+            var performer = shell.Player ?? throw new InvalidOperationException("Shell must have a player");
+            
+            if (!CommandUtils.TryGetSessionByUsernameOrId(shell, playerIdentifier, performer, out var session))
+            {
+                return;
+            }
+
+            var adminName = performer.Name;
+            var key = $"unblacklist_ship_{adminName}_{shipId}";
+            
+            // Capture variables for callback closure
+            var capturedAdminName = adminName;
+            var capturedShipId = shipId;
+            var capturedSessionName = session.Name;
+            
+            // Register callback to handle the player's ship data response
+            Content.Server.Shuttles.Save.ShipSaveSystem.RegisterAdminRequest(key, result => 
+            {
+                // Try to find the ship checksum from cached data
+                var fullChecksum = Content.Server.Shuttles.Save.ShipSaveSystem.FindPlayerShipByBinding(capturedAdminName, capturedSessionName, capturedShipId);
+                
+                if (fullChecksum != null)
+                {
+                    if (!ShipBlacklistService.IsBlacklisted(fullChecksum))
+                    {
+                        shell.WriteLine($"Ship with ID {capturedShipId} is not blacklisted");
+                        return;
+                    }
+                    
+                    ShipBlacklistService.RemoveFromBlacklist(fullChecksum);
+                    
+                    // Audit log
+                    Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {capturedAdminName} unblacklisted {capturedSessionName}'s ship with ID {capturedShipId}");
+                    
+                    var shortChecksum = fullChecksum.Length > 30 ? fullChecksum.Substring(0, 30) + "..." : fullChecksum;
+                    shell.WriteLine($"Unblacklisted {capturedSessionName}'s ship with ID {capturedShipId}");
+                    shell.WriteLine($"Checksum: {shortChecksum}");
+                }
+                else
+                {
+                    shell.WriteLine($"Ship with ID {capturedShipId} not found for player {capturedSessionName}");
+                    shell.WriteLine("Use 'shipsave_player_list' to see available ships");
+                }
+            });
+
+            // Request player's ships first
+            var shipSaveSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<Content.Server.Shuttles.Save.ShipSaveSystem>();
+            shipSaveSystem.SendAdminRequestPlayerShips(session.UserId, adminName, session);
+            
+            shell.WriteLine($"Requesting ship data from {session.Name} to unblacklist ship ID {shipId}...");
+            return;
+        }
+        
+        // Fallback to old format: single checksum argument
         var checksum = args[0];
         
         if (!ShipBlacklistService.IsBlacklisted(checksum))
@@ -412,8 +706,8 @@ public sealed class ShipUnblacklistCommand : IConsoleCommand
         ShipBlacklistService.RemoveFromBlacklist(checksum);
         
         // Audit log
-        var adminName = (shell.Player?.Name ?? "Console");
-        Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {adminName} unblacklisted ship checksum {checksum}");
+        var fallbackAdminName = (shell.Player?.Name ?? "Console");
+        Robust.Shared.Log.Logger.InfoS("admin.ship", $"ADMIN ACTION: {fallbackAdminName} unblacklisted ship checksum {checksum}");
         
         var shortChecksumResult = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
         shell.WriteLine($"Ship removed from blacklist: {shortChecksumResult}");
@@ -425,7 +719,7 @@ public sealed class ShipUnblacklistCommand : IConsoleCommand
 public sealed class ShipBlacklistListCommand : IConsoleCommand
 {
     public string Command => "shipsave_blacklist_list";
-    public string Description => "List all blacklisted ship checksums";
+    public string Description => "List all blacklisted ships with 8-character ship IDs";
     public string Help => "shipsave_blacklist_list";
 
     public void Execute(IConsoleShell shell, string argStr, string[] args)
@@ -434,17 +728,18 @@ public sealed class ShipBlacklistListCommand : IConsoleCommand
         
         if (!blacklisted.Any())
         {
-            shell.WriteLine("📋 No ships are currently blacklisted.");
+            shell.WriteLine("No ships are currently blacklisted.");
             return;
         }
 
-        shell.WriteLine($"📋 Blacklisted Ships ({blacklisted.Count}):");
+        shell.WriteLine($"Blacklisted Ships ({blacklisted.Count}):");
         shell.WriteLine("");
         
         foreach (var (checksum, reason) in blacklisted)
         {
-            var shortChecksum = checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum;
-            shell.WriteLine($"🚫 {shortChecksum}");
+            var serverBinding = ShipBlacklistService.ExtractServerBinding(checksum);
+            var displayId = serverBinding ?? (checksum.Length > 30 ? checksum.Substring(0, 30) + "..." : checksum);
+            shell.WriteLine($"Ship ID: {displayId}");
             shell.WriteLine($"   Reason: {reason}");
             shell.WriteLine("");
         }
@@ -496,3 +791,4 @@ public sealed class ShipSavePlayerListCommand : IConsoleCommand
         shell.WriteLine("(Response will appear when client responds)");
     }
 }
+

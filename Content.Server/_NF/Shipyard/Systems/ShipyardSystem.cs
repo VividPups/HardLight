@@ -43,6 +43,7 @@ using Content.Shared.Popups; // For PopupSystem
 using Robust.Shared.Audio.Systems; // For SharedAudioSystem
 using Content.Server.Administration.Logs; // For IAdminLogManager
 using Content.Shared.Database; // For LogType
+using Content.Server.Administration.Commands; // For ShipBlacklistService
 
 namespace Content.Server._NF.Shipyard.Systems;
 
@@ -132,6 +133,24 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         {
             // Attempting to deserialize YAML
             var shipGridData = shipSerializationSystem.DeserializeShipGridDataFromYaml(message.YamlData, playerSession.UserId, out bool wasLegacyConverted);
+            
+            // Check if ship is blacklisted BEFORE loading
+            if (ShipBlacklistService.IsBlacklisted(shipGridData.Metadata.Checksum))
+            {
+                var reason = ShipBlacklistService.GetBlacklistReason(shipGridData.Metadata.Checksum) ?? "Blacklisted by admin";
+                _sawmill.Warning($"SECURITY: Blocked blacklisted ship load attempt by {playerSession.Name} - {reason}");
+                
+                var playerEntity = playerSession.AttachedEntity;
+                if (playerEntity.HasValue)
+                {
+                    _popup.PopupEntity($"This ship has been blacklisted: {reason}", 
+                                     playerEntity.Value, playerEntity.Value, PopupType.LargeCaution);
+                }
+                return;
+            }
+            
+            // Log this attempt for admin convenience
+            var attemptId = ShipBlacklistService.LogShipAttempt(shipGridData.Metadata.Checksum, playerSession.Name, shipGridData.Metadata.ShipName + "_" + shipGridData.Metadata.Timestamp.ToString("yyyyMMdd_HHmmss") + ".yml");
 
             // Duplicate ship detection using original grid ID
             // Checking for duplicate ship
@@ -256,12 +275,18 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             // Add deed to the ID card in the console - mark as loaded to prevent exploits
             var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardInConsole.Value);
-            AssignShuttleDeedProperties((idCardInConsole.Value, deedComponent), newShipGridUid, finalShipName, playerSession.Name, true); // Mark as loaded
+            deedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
+            TryParseShuttleName(deedComponent, finalShipName);
+            deedComponent.ShuttleOwner = playerSession.Name;
+            deedComponent.PurchasedWithVoucher = true; // Mark as loaded
             _sawmill.Info($"Added deed to ID card in console {idCardInConsole.Value}");
 
             // Also add deed to the ship itself (like purchased ships) but mark as loaded (not purchasable)
             var shipDeedComponent = EnsureComp<ShuttleDeedComponent>(newShipGridUid);
-            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, finalShipName, playerSession.Name, true); // Mark as loaded to prevent sale
+            shipDeedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
+            TryParseShuttleName(shipDeedComponent, finalShipName);
+            shipDeedComponent.ShuttleOwner = playerSession.Name;
+            shipDeedComponent.PurchasedWithVoucher = true; // Mark as loaded to prevent sale
 
             // Station information already set up above during station creation
 

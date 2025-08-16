@@ -410,18 +410,10 @@ namespace Content.Server.Shuttles.Save
                 }
             }
 
-            // Sort tiles by connectivity to maintain grid integrity during placement
-            // Start from the center and work outward to ensure the grid stays connected
+            // Sort tiles by connectivity using flood-fill to prevent grid splitting
             if (tilesToPlace.Any())
             {
-                var center = new Vector2(
-                    (float)tilesToPlace.Average(t => t.coords.X),
-                    (float)tilesToPlace.Average(t => t.coords.Y)
-                );
-
-                tilesToPlace.Sort((a, b) => 
-                    (new Vector2(a.coords.X, a.coords.Y) - center).LengthSquared().CompareTo(
-                    (new Vector2(b.coords.X, b.coords.Y) - center).LengthSquared()));
+                tilesToPlace = SortTilesForConnectivity(tilesToPlace);
             }
 
             // Place tiles maintaining connectivity
@@ -480,11 +472,11 @@ namespace Content.Server.Shuttles.Save
             }
             else
             {
-                _sawmill.Info("No decal data found, decals will not be restored");
+                // No decal data found
             }
 
             // Two-phase entity reconstruction to handle containers properly
-            _sawmill.Info($"Starting two-phase entity reconstruction for {primaryGridData.Entities.Count} entities");
+            // Starting two-phase entity reconstruction
             
             var entityIdMapping = new Dictionary<string, EntityUid>();
             var spawnedEntities = new List<(EntityUid entity, string prototype, Vector2 position)>();
@@ -540,7 +532,7 @@ namespace Content.Server.Shuttles.Save
             {
                 if (string.IsNullOrEmpty(entityData.Prototype))
                 {
-                    _sawmill.Debug($"Skipping contained entity with empty prototype");
+                    //_sawmill.Debug($"Skipping contained entity with empty prototype");
                     continue;
                 }
 
@@ -607,7 +599,7 @@ namespace Content.Server.Shuttles.Save
                         Math.Abs(e.position.X - group.Key.X) < 0.01f && 
                         Math.Abs(e.position.Y - group.Key.Y) < 0.01f).ToList();
                     
-                    _sawmill.Info($"Position ({group.Key.X}, {group.Key.Y}): Expected {group.Count()} entities, spawned {spawnedAtPosition.Count}");
+                    //_sawmill.Info($"Position ({group.Key.X}, {group.Key.Y}): Expected {group.Count()} entities, spawned {spawnedAtPosition.Count}");
                     
                     if (spawnedAtPosition.Count != group.Count())
                     {
@@ -662,18 +654,10 @@ namespace Content.Server.Shuttles.Save
                 }
             }
 
-            // Sort tiles by connectivity to maintain grid integrity during placement
-            // Start from the center and work outward to ensure the grid stays connected
+            // Sort tiles by connectivity using flood-fill to prevent grid splitting
             if (tilesToPlace.Any())
             {
-                var center = new Vector2(
-                    (float)tilesToPlace.Average(t => t.coords.X),
-                    (float)tilesToPlace.Average(t => t.coords.Y)
-                );
-
-                tilesToPlace.Sort((a, b) => 
-                    (new Vector2(a.coords.X, a.coords.Y) - center).LengthSquared().CompareTo(
-                    (new Vector2(b.coords.X, b.coords.Y) - center).LengthSquared()));
+                tilesToPlace = SortTilesForConnectivity(tilesToPlace);
             }
 
             // Place tiles maintaining connectivity
@@ -732,7 +716,7 @@ namespace Content.Server.Shuttles.Save
             }
             else
             {
-                _sawmill.Info("No decal data found, decals will not be restored");
+                // No decal data found
             }
 
             // Reconstruct entities with component restoration
@@ -1049,7 +1033,7 @@ namespace Content.Server.Shuttles.Save
                 // Filter out problematic component types that shouldn't be serialized
                 if (IsProblematicComponent(componentType))
                 {
-                    _sawmill.Debug($"Skipping problematic component: {typeName}");
+                    // Skipping problematic component
                     return null;
                 }
 
@@ -1079,7 +1063,7 @@ namespace Content.Server.Shuttles.Save
                 // Log important component preservation
                 if (IsImportantComponent(componentType))
                 {
-                    _sawmill.Info($"✓ Preserved important component: {typeName}");
+                    // Preserved important component
                 }
 
                 return componentData;
@@ -1092,7 +1076,7 @@ namespace Content.Server.Shuttles.Save
                 if (IsProblematicComponent(componentType))
                 {
                     // Reduce noise - only log at debug level for expected failures
-                    _sawmill.Debug($"Expected serialization failure for component {componentType.Name}");
+                    // Expected serialization failure
                 }
                 else if (IsImportantComponent(componentType))
                 {
@@ -1102,7 +1086,7 @@ namespace Content.Server.Shuttles.Save
                 else
                 {
                     // Less important components - just debug
-                    _sawmill.Debug($"Failed to serialize component {componentType.Name}: {ex.Message}");
+                    // Failed to serialize component
                 }
                 return null;
             }
@@ -1172,7 +1156,7 @@ namespace Content.Server.Shuttles.Save
                     NetId = 0 // NetID not available in this context
                 };
 
-                _sawmill.Info($"Preserved solution component with {solutionData.Count} solutions");
+                // Preserved solution component
                 return componentData;
             }
             catch (Exception ex)
@@ -1334,15 +1318,15 @@ namespace Content.Server.Shuttles.Save
                     }
                     else
                     {
-                        _sawmill.Debug($"Failed to restore component {componentData.Type} on entity {entityUid}");
+                        // Failed to restore component
                     }
                 }
             }
 
             if (restored > 0 || failed > 0 || skipped > 0)
             {
-                _sawmill.Info($"Entity {entityUid}: {restored} restored, {failed} failed, {skipped} skipped");
-                if (failed > 5) // Only warn if many failures
+                // Entity component restoration completed
+                if (failed > 10) // Only warn if excessive failures
                 {
                     _sawmill.Warning($"Entity {entityUid} had {failed} component restoration failures - entity may be incomplete");
                 }
@@ -1362,7 +1346,7 @@ namespace Content.Server.Shuttles.Save
                     }
                     else
                     {
-                        _sawmill.Debug($"Solution component found but no Properties data - skipping restoration for entity {entityUid}");
+                        // Solution component has no data - skipping
                     }
                     return;
                 }
@@ -1376,7 +1360,7 @@ namespace Content.Server.Shuttles.Save
                     }
                     else
                     {
-                        _sawmill.Debug($"Paper component found but no Properties data - skipping restoration for entity {entityUid}");
+                        // Paper component has no data - skipping
                     }
                     return;
                 }
@@ -1392,7 +1376,7 @@ namespace Content.Server.Shuttles.Save
 
                 if (!componentTypes.Any())
                 {
-                    _sawmill.Debug($"Component type {componentData.Type} not found - may be from different version");
+                    // Component type not found - version mismatch
                     return;
                 }
 
@@ -1401,7 +1385,7 @@ namespace Content.Server.Shuttles.Save
                 // Skip problematic components during restoration too
                 if (IsProblematicComponent(componentType))
                 {
-                    _sawmill.Debug($"Skipping restoration of problematic component: {componentData.Type}");
+                    // Skipping problematic component
                     return;
                 }
 
@@ -1418,7 +1402,7 @@ namespace Content.Server.Shuttles.Save
                     }
                     catch (Exception ex)
                     {
-                        _sawmill.Warning($"Failed to create component {componentData.Type}: {ex.Message}");
+                        // Failed to create component - continuing
                         return;
                     }
                 }
@@ -1430,7 +1414,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     object? temp = existingComponent;
                     _serializationManager.CopyTo(node, ref temp);
-                    _sawmill.Debug($"Restored component {componentData.Type} on entity {entityUid}");
+                    // Component restored
                 }
                 catch (Exception ex)
                 {
@@ -1441,14 +1425,14 @@ namespace Content.Server.Shuttles.Save
                     }
                     else
                     {
-                        _sawmill.Debug($"Failed to populate component {componentData.Type} data");
+                        // Failed to populate component data
                     }
                     // Continue execution - partial restoration is better than none
                 }
             }
             catch (Exception ex)
             {
-                _sawmill.Warning($"Failed to restore component {componentData.Type} on entity {entityUid}: {ex.Message}");
+                // Failed to restore component - continuing
                 // Don't throw - continue with other components
             }
         }
@@ -1514,7 +1498,9 @@ namespace Content.Server.Shuttles.Save
                 }
 
                 if (restoredSolutions > 0)
-                    _sawmill.Info($"Restored {restoredSolutions} chemical solutions on entity {entityUid}");
+                {
+                    // Restored chemical solutions
+                }
             }
             catch (Exception ex)
             {
@@ -1741,7 +1727,7 @@ namespace Content.Server.Shuttles.Save
                             _entityManager.DeleteEntity(defaultItem);
                         }
                     }
-                    _sawmill.Debug($"Cleared default contents from container {newEntity} - will restore saved contents");
+                    //_sawmill.Debug($"Cleared default contents from container {newEntity} - will restore saved contents");
                 }
 
                 // Restore component states
@@ -1778,12 +1764,12 @@ namespace Content.Server.Shuttles.Save
                 // Use the container system to properly insert the entity
                 if (_containerSystem.Insert(entityToInsert, container))
                 {
-                    _sawmill.Debug($"Successfully inserted entity {entityToInsert} into container {containerEntity} slot '{containerSlot}'");
+                    //_sawmill.Debug($"Successfully inserted entity {entityToInsert} into container {containerEntity} slot '{containerSlot}'");
                     return true;
                 }
                 else
                 {
-                    _sawmill.Warning($"Failed to insert entity {entityToInsert} into container {containerEntity} slot '{containerSlot}' - container may be full");
+                    //_sawmill.Warning($"Failed to insert entity {entityToInsert} into container {containerEntity} slot '{containerSlot}' - container may be full");
                     return false;
                 }
             }
@@ -1792,6 +1778,55 @@ namespace Content.Server.Shuttles.Save
                 _sawmill.Error($"Error inserting entity {entityToInsert} into container {containerEntity}: {ex.Message}");
                 return false;
             }
+        }
+
+        private List<(Vector2i coords, Tile tile)> SortTilesForConnectivity(List<(Vector2i coords, Tile tile)> tilesToPlace)
+        {
+            if (!tilesToPlace.Any()) return tilesToPlace;
+
+            var result = new List<(Vector2i coords, Tile tile)>();
+            var remaining = new HashSet<Vector2i>(tilesToPlace.Select(t => t.coords));
+            var tileDict = tilesToPlace.ToDictionary(t => t.coords, t => t.tile);
+
+            // Start with any tile (preferably near center)
+            var startCoord = tilesToPlace.OrderBy(t => t.coords.X * t.coords.X + t.coords.Y * t.coords.Y).First().coords;
+            var queue = new Queue<Vector2i>();
+            queue.Enqueue(startCoord);
+            remaining.Remove(startCoord);
+
+            // Flood-fill from start position
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                result.Add((current, tileDict[current]));
+
+                // Check adjacent positions (4-directional)
+                var adjacent = new[]
+                {
+                    new Vector2i(current.X + 1, current.Y),
+                    new Vector2i(current.X - 1, current.Y),
+                    new Vector2i(current.X, current.Y + 1),
+                    new Vector2i(current.X, current.Y - 1)
+                };
+
+                foreach (var adj in adjacent)
+                {
+                    if (remaining.Contains(adj))
+                    {
+                        queue.Enqueue(adj);
+                        remaining.Remove(adj);
+                    }
+                }
+            }
+
+            // Add any remaining disconnected tiles (these will create separate grids)
+            foreach (var remainingCoord in remaining)
+            {
+                result.Add((remainingCoord, tileDict[remainingCoord]));
+                _sawmill.Warning($"GRID SPLIT: Disconnected tile at {remainingCoord} will create separate grid");
+            }
+
+            return result;
         }
 
         private Vector2 FindNearbyPosition(EntityUid gridEntity, Vector2 originalPosition)
