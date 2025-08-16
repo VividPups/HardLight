@@ -98,6 +98,19 @@ namespace Content.Shared.Shuttles.Save
 
         [DataField("components")]
         public List<ComponentData> Components { get; set; } = new();
+
+        // Container relationship data
+        [DataField("parent_container_entity")]
+        public string? ParentContainerEntity { get; set; } = null;
+
+        [DataField("container_slot")]
+        public string? ContainerSlot { get; set; } = null;
+
+        [DataField("is_container")]
+        public bool IsContainer { get; set; } = false;
+
+        [DataField("is_contained")]
+        public bool IsContained { get; set; } = false;
     }
 
     [Serializable]
@@ -107,12 +120,16 @@ namespace Content.Shared.Shuttles.Save
         [DataField("type")]
         public string Type { get; set; } = string.Empty;
 
-        // This will hold the serialized properties of the component.
-        // RobustToolbox's serialization system can handle this automatically
-        // if the properties are defined with [DataField] in the actual component class.
-        // For a generic representation, you might need a more complex structure or dynamic serialization.
-        // For simplicity, we'll assume RobustToolbox handles the inner serialization.
+        // Serialized component data as YAML string for robust handling
+        [DataField("yaml_data")]
+        public string YamlData { get; set; } = string.Empty;
+
+        // Backup properties dictionary for simple key-value data
         [DataField("properties")]
-        public Dictionary<string, object> Properties { get; set; } = new(); // Placeholder for actual component properties
+        public Dictionary<string, object> Properties { get; set; } = new();
+
+        // Component registration information
+        [DataField("net_id")]
+        public ushort NetId { get; set; } = 0;
     }
 }

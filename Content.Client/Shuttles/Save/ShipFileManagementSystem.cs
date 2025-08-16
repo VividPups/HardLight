@@ -43,6 +43,8 @@ namespace Content.Client.Shuttles.Save
             SubscribeNetworkEvent<SendShipSaveDataClientMessage>(HandleSaveShipDataClient);
             SubscribeNetworkEvent<SendAvailableShipsMessage>(HandleAvailableShipsMessage);
             SubscribeNetworkEvent<ShipConvertedToSecureFormatMessage>(HandleShipConvertedToSecureFormat);
+            SubscribeNetworkEvent<AdminRequestPlayerShipsMessage>(HandleAdminRequestPlayerShips);
+            SubscribeNetworkEvent<AdminRequestShipDataMessage>(HandleAdminRequestShipData);
             
             // Ensure saved_ships directory exists on startup
             EnsureSavedShipsDirectoryExists();
@@ -306,6 +308,7 @@ namespace Content.Client.Shuttles.Save
 
         public List<string> GetSavedShipFiles()
         {
+            /*
             Logger.Info($"GetSavedShipFiles called on Instance #{_instanceId}: returning {_staticAvailableShips.Count} ships");
             Logger.Info($"Cache contains {_staticCachedShipData.Count} cached ships");
             foreach (var ship in _staticAvailableShips)
@@ -315,7 +318,7 @@ namespace Content.Client.Shuttles.Save
             foreach (var cached in _staticCachedShipData.Keys)
             {
                 Logger.Info($"  - Cached: {cached}");
-            }
+            }*/
             // Return list of ships available from server and cached locally
             return new List<string>(_staticAvailableShips);
         }
@@ -328,6 +331,72 @@ namespace Content.Client.Shuttles.Save
         public string? GetShipData(string shipName)
         {
             return _staticCachedShipData.TryGetValue(shipName, out var data) ? data : null;
+        }
+
+        private void HandleAdminRequestPlayerShips(AdminRequestPlayerShipsMessage message)
+        {
+            try
+            {
+                // Only respond if this is our player ID  
+                var playerManager = IoCManager.Resolve<Robust.Client.Player.IPlayerManager>();
+                if (playerManager.LocalSession?.UserId != message.PlayerId)
+                    return;
+
+                var ships = new List<(string filename, string shipName, DateTime timestamp, string checksum)>();
+                
+                // Parse ship metadata from cached ships
+                foreach (var (filename, yamlData) in _staticCachedShipData)
+                {
+                    try
+                    {
+                        if (yamlData.Contains("shipName:") && yamlData.Contains("timestamp:") && yamlData.Contains("checksum:"))
+                        {
+                            var lines = yamlData.Split('\n');
+                            var shipName = lines.FirstOrDefault(l => l.Trim().StartsWith("shipName:"))?.Split(':')[1].Trim() ?? "Unknown";
+                            var timestampStr = lines.FirstOrDefault(l => l.Trim().StartsWith("timestamp:"))?.Split(':', 2)[1].Trim() ?? "";
+                            var checksum = lines.FirstOrDefault(l => l.Trim().StartsWith("checksum:"))?.Split(':', 2)[1].Trim() ?? "";
+                            
+                            if (DateTime.TryParse(timestampStr, out var timestamp))
+                            {
+                                ships.Add((filename, shipName, timestamp, checksum));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Failed to parse ship metadata for {filename}: {ex.Message}");
+                    }
+                }
+
+                // Send response back to admin
+                RaiseNetworkEvent(new AdminSendPlayerShipsMessage(ships, message.AdminName));
+                Logger.Info($"Sent {ships.Count} ship details to admin {message.AdminName}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to handle admin request for player ships: {ex.Message}");
+            }
+        }
+
+        private void HandleAdminRequestShipData(AdminRequestShipDataMessage message)
+        {
+            try
+            {
+                // Check if we have the requested ship data
+                if (_staticCachedShipData.TryGetValue(message.ShipFilename, out var shipData))
+                {
+                    RaiseNetworkEvent(new AdminSendShipDataMessage(shipData, message.ShipFilename, message.AdminName));
+                    Logger.Info($"Sent ship data for {message.ShipFilename} to admin {message.AdminName}");
+                }
+                else
+                {
+                    Logger.Warning($"Admin {message.AdminName} requested ship data for {message.ShipFilename} but file not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to handle admin request for ship data: {ex.Message}");
+            }
         }
     }
 }
