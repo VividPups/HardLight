@@ -29,6 +29,7 @@ using Robust.Shared.Log; // ADDED: For Logger
 
 // using Content.Shared._NF.Shipyard.Systems; // REMOVED: Not needed, SharedShipyardSystem is in Content.Shared._NF.Shipyard
 using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage
+using Content.Shared.IdCards.Components; // For IdCardComponent
 
 namespace Content.Server._NF.Shipyard.Systems;
 
@@ -87,6 +88,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     SubscribeLocalEvent<ShipyardConsoleComponent, ComponentStartup>(OnShipyardStartup);
     SubscribeLocalEvent<ShipyardConsoleComponent, BoundUIOpenedEvent>(OnConsoleUIOpened);
     SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsoleSellMessage>(OnSellMessage);
+        SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsoleSaveMessage>(OnSaveMessage);
     SubscribeLocalEvent<ShipyardConsoleComponent, ShipyardConsolePurchaseMessage>(OnPurchaseMessage);
     SubscribeLocalEvent<ShipyardConsoleComponent, EntInsertedIntoContainerMessage>(OnItemSlotChanged);
     SubscribeLocalEvent<ShipyardConsoleComponent, EntRemovedFromContainerMessage>(OnItemSlotChanged);
@@ -100,38 +102,111 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         if (playerSession == null)
             return;
 
+        _sawmill.Info($"Player {playerSession.Name} requested to load ship from YAML data");
         var shipSerializationSystem = _entitySystemManager.GetEntitySystem<ShipSerializationSystem>();
 
         try
         {
+            _sawmill.Debug($"Attempting to deserialize YAML data for player {playerSession.Name}");
             var shipGridData = shipSerializationSystem.DeserializeShipGridDataFromYaml(message.YamlData, playerSession.UserId);
 
             // Duplicate ship detection
+            _sawmill.Debug($"Checking for duplicate ship with OriginalGridId: {shipGridData.Metadata.OriginalGridId}");
             if (EntityUid.TryParse(shipGridData.Metadata.OriginalGridId, out var originalGridUid) && _entityManager.EntityExists(originalGridUid))
             {
                 throw new InvalidOperationException($"A ship with the original ID {shipGridData.Metadata.OriginalGridId} already exists on the server.");
             }
-            // TODO: Add more robust duplicate checks, e.g., by ship name for the player.
 
-            var newShipGridUid = shipSerializationSystem.ReconstructShip(shipGridData);
-            Logger.Info($"Player {playerSession.Name} successfully loaded ship {shipGridData.Metadata.ShipName} (Grid: {newShipGridUid}).");
+            // Find a shipyard console first to determine spawn location
+            var consoles = EntityQueryEnumerator<ShipyardConsoleComponent>();
+            EntityUid? targetConsole = null;
+            
+            while (consoles.MoveNext(out var consoleUid, out var console))
+            {
+                targetConsole = consoleUid;
+                break; // Use the first available console
+            }
 
-            // TODO: Place the new ship in the world, assign ownership, etc.
+            if (!targetConsole.HasValue || !TryComp<TransformComponent>(targetConsole.Value, out var consoleXform) || consoleXform.GridUid == null)
+            {
+                _sawmill.Error($"No suitable shipyard console found for ship loading.");
+                return;
+            }
+
+            // Reconstruct ship on shipyard map (similar to TryAddShuttle behavior)
+            SetupShipyardIfNeeded();
+            if (ShipyardMap == null)
+            {
+                _sawmill.Error($"Shipyard map not available for ship loading.");
+                return;
+            }
+
+            var newShipGridUid = shipSerializationSystem.ReconstructShipOnMap(shipGridData, ShipyardMap.Value, new Vector2(500f + _shuttleIndex, 1f));
+            _sawmill.Info($"Player {playerSession.Name} successfully loaded ship {shipGridData.Metadata.ShipName} (Grid: {newShipGridUid}) on shipyard map.");
+
+            // Update shuttle index for spacing
+            if (TryComp<MapGridComponent>(newShipGridUid, out var gridComp))
+            {
+                _shuttleIndex += gridComp.LocalAABB.Width + ShuttleSpawnBuffer;
+            }
+
+            // Dock the loaded ship to the console's grid (similar to purchase behavior)
+            if (TryComp<ShuttleComponent>(newShipGridUid, out var shuttleComponent))
+            {
+                var targetGrid = consoleXform.GridUid.Value;
+                _shuttle.TryFTLDock(newShipGridUid, shuttleComponent, targetGrid);
+                _sawmill.Info($"Attempted to dock ship {newShipGridUid} to console grid {targetGrid}");
+            }
+
+            // Find the player's entity to associate with the deed
+            var playerEntityQuery = EntityQueryEnumerator<ActorComponent>();
+            EntityUid? playerEntity = null;
+            
+            while (playerEntityQuery.MoveNext(out var actor, out var actorComp))
+            {
+                if (actorComp.PlayerSession == playerSession)
+                {
+                    playerEntity = actor;
+                    break;
+                }
+            }
+
+            if (playerEntity != null)
+            {
+                // Try to add deed to player's ID if they have one
+                if (TryComp<IdCardComponent>(playerEntity.Value, out var idCard))
+                {
+                    var deedComponent = EnsureComp<ShuttleDeedComponent>(playerEntity.Value);
+                    deedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
+                    deedComponent.ShuttleName = shipGridData.Metadata.ShipName;
+                    deedComponent.ShuttleOwner = playerSession.Name;
+                    deedComponent.PurchasedWithVoucher = false;
+                    Dirty(playerEntity.Value, deedComponent);
+                    _sawmill.Info($"Added deed to player's ID card");
+                }
+            }
+
+            // Also add deed to the ship itself
+            var shipDeedComponent = EnsureComp<ShuttleDeedComponent>(newShipGridUid);
+            shipDeedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
+            shipDeedComponent.ShuttleName = shipGridData.Metadata.ShipName;
+            shipDeedComponent.ShuttleOwner = playerSession.Name;
+            shipDeedComponent.PurchasedWithVoucher = false;
+            Dirty(newShipGridUid, shipDeedComponent);
+
+            _sawmill.Info($"Successfully loaded and docked ship {shipGridData.Metadata.ShipName} for player {playerSession.Name}");
         }
         catch (InvalidOperationException e)
         {
-            Logger.Error($"Ship loading failed for {playerSession.Name} due to data tampering: {e.Message}");
-            // TODO: Send error message to client
+            _sawmill.Error($"Ship loading failed for {playerSession.Name} due to data tampering: {e.Message}");
         }
         catch (UnauthorizedAccessException e)
         {
-            Logger.Error($"Ship loading failed for {playerSession.Name} due to unauthorized access: {e.Message}");
-            // TODO: Send error message to client
+            _sawmill.Error($"Ship loading failed for {playerSession.Name} due to unauthorized access: {e.Message}");
         }
         catch (Exception e)
         {
-            Logger.Error($"An unexpected error occurred during ship loading for {playerSession.Name}: {e.Message}");
-            // TODO: Send generic error message to client
+            _sawmill.Error($"An unexpected error occurred during ship loading for {playerSession.Name}: {e.Message}");
         }
     }
     public override void Shutdown()
@@ -385,7 +460,8 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
         var shuttle = shuttleDeed.ShuttleUid;
         if (shuttle != null
-             && _station.GetOwningStation(shuttle.Value) is { Valid: true } shuttleStation)
+             && TryGetEntity(shuttle.Value, out var shuttleEntity)
+             && _station.GetOwningStation(shuttleEntity.Value) is { Valid: true } shuttleStation)
         {
             shuttleDeed.ShuttleName = newName;
             shuttleDeed.ShuttleNameSuffix = newSuffix;
@@ -393,7 +469,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
             var fullName = GetFullName(shuttleDeed);
             _station.RenameStation(shuttleStation, fullName, loud: false);
-            _metaData.SetEntityName(shuttle.Value, fullName);
+            _metaData.SetEntityName(shuttleEntity.Value, fullName);
             _metaData.SetEntityName(shuttleStation, fullName);
         }
         else
@@ -403,8 +479,8 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         }
 
         //TODO: move this to an event that others hook into.
-        if (TryGetNetEntity(shuttleDeed.ShuttleUid, out var shuttleNetEntity) &&
-            _shuttleRecordsSystem.TryGetRecord(shuttleNetEntity.Value, out var record))
+        if (shuttleDeed.ShuttleUid != null &&
+            _shuttleRecordsSystem.TryGetRecord(shuttleDeed.ShuttleUid.Value, out var record))
         {
             record.Name = newName ?? "";
             record.Suffix = newSuffix ?? "";

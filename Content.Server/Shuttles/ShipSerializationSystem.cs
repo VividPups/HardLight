@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Collections.Generic;
+using System.Numerics;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Content.Shared.Shuttles.Save;
@@ -17,6 +18,8 @@ using Robust.Shared.Maths;
 using System;
 using Content.Shared.Coordinates;
 using Content.Shared.Coordinates.Helpers;
+using Robust.Shared.Log;
+using Robust.Server.GameObjects;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -25,6 +28,9 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IEntityManager _entityManager = default!;
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly ISerializationManager _serializationManager = default!;
+        [Dependency] private readonly MapSystem _map = default!;
+        
+        private ISawmill _sawmill = default!;
 
         private ISerializer _serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -37,6 +43,7 @@ namespace Content.Server.Shuttles.Save
         public override void Initialize()
         {
             base.Initialize();
+            _sawmill = Logger.GetSawmill("ship-serialization");
         }
 
     public ShipGridData SerializeShip(EntityUid gridId, NetUserId playerId, string shipName)
@@ -98,7 +105,18 @@ namespace Content.Server.Shuttles.Save
 
         public ShipGridData DeserializeShipGridDataFromYaml(string yamlString, Guid loadingPlayerId)
         {
-            var data = _deserializer.Deserialize<ShipGridData>(yamlString);
+            _sawmill.Info($"Deserializing YAML for player {loadingPlayerId}");
+            ShipGridData data;
+            try
+            {
+                data = _deserializer.Deserialize<ShipGridData>(yamlString);
+                _sawmill.Debug($"Successfully deserialized YAML data");
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"YAML deserialization failed: {ex.Message}");
+                throw;
+            }
 
             var actualChecksum = GenerateChecksum(data.Grids);
             if (data.Metadata.Checksum != actualChecksum)
@@ -115,19 +133,89 @@ namespace Content.Server.Shuttles.Save
             return data;
         }
 
-        public EntityUid ReconstructShip(ShipGridData shipGridData)
+        public EntityUid ReconstructShipOnMap(ShipGridData shipGridData, MapId targetMap, Vector2 offset)
         {
+            _sawmill.Info($"Reconstructing ship with {shipGridData.Grids.Count} grids on map {targetMap} at offset {offset}");
             if (shipGridData.Grids.Count == 0)
             {
                 throw new ArgumentException("No grid data to reconstruct.");
             }
 
             var primaryGridData = shipGridData.Grids[0];
-            var newGrid = _mapManager.CreateGrid(MapId.Nullspace);
+            _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
+            
+            var newGrid = _mapManager.CreateGrid(targetMap);
+            _sawmill.Info($"Created new grid {newGrid.Owner} on shipyard map {targetMap}");
+
+            // Move grid to the specified offset position
+            var gridXform = Transform(newGrid.Owner);
+            gridXform.WorldPosition = offset;
 
             foreach (var entityData in primaryGridData.Entities)
             {
-                var newEntity = _entityManager.SpawnEntity(entityData.Prototype, newGrid.Owner.ToCoordinates(entityData.Position));
+                // Skip entities with empty or null prototypes
+                if (string.IsNullOrEmpty(entityData.Prototype))
+                {
+                    _sawmill.Debug($"Skipping entity with empty prototype at {entityData.Position}");
+                    continue;
+                }
+
+                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position}");
+                try
+                {
+                    var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                    var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    _sawmill.Debug($"Spawned entity {newEntity}");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
+                    throw;
+                }
+            }
+
+            return newGrid.Owner;
+        }
+
+        public EntityUid ReconstructShip(ShipGridData shipGridData)
+        {
+            _sawmill.Info($"Reconstructing ship with {shipGridData.Grids.Count} grids");
+            if (shipGridData.Grids.Count == 0)
+            {
+                throw new ArgumentException("No grid data to reconstruct.");
+            }
+
+            var primaryGridData = shipGridData.Grids[0];
+            _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
+            
+            // Create a new map for the ship instead of using MapId.Nullspace
+            _map.CreateMap(out var mapId);
+            _sawmill.Info($"Created new map {mapId}");
+            
+            var newGrid = _mapManager.CreateGrid(mapId);
+            _sawmill.Info($"Created new grid {newGrid.Owner} on map {mapId}");
+
+            foreach (var entityData in primaryGridData.Entities)
+            {
+                // Skip entities with empty or null prototypes
+                if (string.IsNullOrEmpty(entityData.Prototype))
+                {
+                    _sawmill.Debug($"Skipping entity with empty prototype at {entityData.Position}");
+                    continue;
+                }
+
+                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position}");
+                try
+                {
+                    var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                    var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    _sawmill.Debug($"Spawned entity {newEntity}");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
+                    throw;
+                }
             }
 
             return newGrid.Owner;

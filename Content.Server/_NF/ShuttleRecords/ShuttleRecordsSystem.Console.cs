@@ -201,7 +201,7 @@ public sealed partial class ShuttleRecordsSystem
         var shuttleEntity = _entityManager.GetEntity(shuttleRecord.EntityUid);
 
         // Copy over the variables from the shuttle record to the deed.
-        deed.ShuttleUid = shuttleEntity;
+        deed.ShuttleUid = GetNetEntity(shuttleEntity);
         deed.ShuttleOwner = shuttleRecord.OwnerName;
         deed.ShuttleName = shuttleRecord.Name;
         deed.ShuttleNameSuffix = shuttleRecord.Suffix;

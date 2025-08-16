@@ -1,5 +1,6 @@
 using Robust.Shared.Serialization;
 using System;
+using System.Collections.Generic;
 using Robust.Shared.GameObjects;
 
 namespace Content.Shared.Shuttles.Save
@@ -18,13 +19,13 @@ namespace Content.Shared.Shuttles.Save
     [Serializable, NetSerializable]
     public sealed class SendShipSaveDataClientMessage : EntityEventArgs
     {
-        public string YamlData { get; }
         public string ShipName { get; }
+        public string ShipData { get; }
 
-        public SendShipSaveDataClientMessage(string yamlData, string shipName)
+        public SendShipSaveDataClientMessage(string shipName, string shipData)
         {
-            YamlData = yamlData;
             ShipName = shipName;
+            ShipData = shipData;
         }
     }
 
@@ -36,6 +37,22 @@ namespace Content.Shared.Shuttles.Save
         public RequestLoadShipMessage(string yamlData)
         {
             YamlData = yamlData;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class RequestAvailableShipsMessage : EntityEventArgs
+    {
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class SendAvailableShipsMessage : EntityEventArgs
+    {
+        public List<string> ShipNames { get; }
+
+        public SendAvailableShipsMessage(List<string> shipNames)
+        {
+            ShipNames = shipNames;
         }
     }
 }
