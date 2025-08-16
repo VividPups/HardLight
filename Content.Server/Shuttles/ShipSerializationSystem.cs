@@ -109,12 +109,6 @@ namespace Content.Server.Shuttles.Save
 
             _sawmill.Info($"Serialized {gridData.Tiles.Count} tiles");
             
-            // Check for overlapping entities at same coordinates
-            var positionGroups = gridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1);
-            foreach (var group in positionGroups)
-            {
-                _sawmill.Info($"Found {group.Count()} entities at position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
-            }
 
             // Skip atmosphere serialization as TileAtmosphere is not serializable
             // Atmosphere will be restored using fixgridatmos command during loading
@@ -171,6 +165,17 @@ namespace Content.Server.Shuttles.Save
             }
 
             shipGridData.Grids.Add(gridData);
+            
+            // Check for overlapping entities at same coordinates AFTER serialization
+            var positionGroups = gridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1);
+            if (positionGroups.Any())
+            {
+                _sawmill.Warning($"Found {positionGroups.Count()} positions with overlapping entities during serialization:");
+                foreach (var group in positionGroups)
+                {
+                    _sawmill.Warning($"  Position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
+                }
+            }
             
             // Generate checksum AFTER all data is finalized
             var checksum = GenerateChecksum(shipGridData.Grids);
@@ -409,8 +414,48 @@ namespace Content.Server.Shuttles.Save
                 _sawmill.Info("No decal data found, decals will not be restored");
             }
 
-            // Reconstruct entities
+            // Reconstruct entities with smart overlap handling
+            _sawmill.Info($"Starting entity reconstruction for {primaryGridData.Entities.Count} entities");
+            
+            // Group entities by position to handle overlapping entities intelligently
+            var entitiesByPosition = primaryGridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).ToList();
+            var overlappingPositions = entitiesByPosition.Where(g => g.Count() > 1).ToList();
+            
+            if (overlappingPositions.Any())
+            {
+                _sawmill.Warning($"Found {overlappingPositions.Count} positions with multiple entities during reconstruction:");
+                foreach (var group in overlappingPositions)
+                {
+                    _sawmill.Warning($"  Position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
+                }
+            }
+            
+            var spawnedEntities = new List<(EntityUid entity, string prototype, Vector2 position)>();
+            var spawnedPositions = new HashSet<(float x, float y)>();
+            
+            // Define spawn priority order - infrastructure first, then furniture, then items
+            var entityPriority = new Dictionary<string, int>();
             foreach (var entityData in primaryGridData.Entities)
+            {
+                var proto = entityData.Prototype.ToLower();
+                if (proto.Contains("pipe") || proto.Contains("cable") || proto.Contains("wire") || proto.Contains("conduit"))
+                    entityPriority[entityData.Prototype] = 1; // Highest priority
+                else if (proto.Contains("wall") || proto.Contains("floor") || proto.Contains("door"))
+                    entityPriority[entityData.Prototype] = 2;
+                else if (proto.Contains("light") || proto.Contains("machine") || proto.Contains("console"))
+                    entityPriority[entityData.Prototype] = 3;
+                else
+                    entityPriority[entityData.Prototype] = 4; // Lowest priority
+            }
+            
+            // Sort entities by priority, then by position for deterministic ordering
+            var sortedEntities = primaryGridData.Entities
+                .OrderBy(e => entityPriority.GetValueOrDefault(e.Prototype, 4))
+                .ThenBy(e => e.Position.X)
+                .ThenBy(e => e.Position.Y)
+                .ToList();
+            
+            foreach (var entityData in sortedEntities)
             {
                 // Skip entities with empty or null prototypes
                 if (string.IsNullOrEmpty(entityData.Prototype))
@@ -422,6 +467,21 @@ namespace Content.Server.Shuttles.Save
                 try
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                    var posKey = (entityData.Position.X, entityData.Position.Y);
+                    
+                    // Check if this position already has an entity spawned
+                    if (spawnedPositions.Contains(posKey))
+                    {
+                        var proto = entityData.Prototype.ToLower();
+                        // Allow infrastructure entities to stack (pipes, cables, etc.)
+                        if (!(proto.Contains("pipe") || proto.Contains("cable") || proto.Contains("wire") || 
+                              proto.Contains("conduit") || proto.Contains("junction") || proto.Contains("atmos")))
+                        {
+                            _sawmill.Warning($"Skipping duplicate entity {entityData.Prototype} at occupied position {entityData.Position}");
+                            continue;
+                        }
+                    }
+                    
                     var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
                     
                     // Apply rotation if it exists
@@ -431,13 +491,36 @@ namespace Content.Server.Shuttles.Save
                         transform.LocalRotation = new Angle(entityData.Rotation);
                     }
 
-                    
+                    spawnedEntities.Add((newEntity, entityData.Prototype, entityData.Position));
+                    spawnedPositions.Add(posKey);
                     _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
-                    throw;
+                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype} at {entityData.Position}: {ex.Message}");
+                    // Don't throw, continue with other entities
+                }
+            }
+            
+            // Final verification - check if we lost any entities at overlapping positions
+            _sawmill.Info($"Entity reconstruction complete. Spawned {spawnedEntities.Count} entities");
+            
+            if (overlappingPositions.Any())
+            {
+                foreach (var group in overlappingPositions)
+                {
+                    var spawnedAtPosition = spawnedEntities.Where(e => 
+                        Math.Abs(e.position.X - group.Key.X) < 0.01f && 
+                        Math.Abs(e.position.Y - group.Key.Y) < 0.01f).ToList();
+                    
+                    _sawmill.Info($"Position ({group.Key.X}, {group.Key.Y}): Expected {group.Count()} entities, spawned {spawnedAtPosition.Count}");
+                    
+                    if (spawnedAtPosition.Count != group.Count())
+                    {
+                        _sawmill.Error($"ENTITY LOSS DETECTED at ({group.Key.X}, {group.Key.Y})!");
+                        _sawmill.Error($"  Expected: {string.Join(", ", group.Select(e => e.Prototype))}");
+                        _sawmill.Error($"  Spawned: {string.Join(", ", spawnedAtPosition.Select(e => e.prototype))}");
+                    }
                 }
             }
 
@@ -599,11 +682,37 @@ namespace Content.Server.Shuttles.Save
             if (_entityManager.TryGetComponent<TransformComponent>(entityUid, out var transformComp))
             {
                 var parent = transformComp.ParentUid;
+                
+                // Direct grid children should always be included (pipes, cables, fixtures, etc.)
+                if (parent == gridId)
+                {
+                    return false;
+                }
+                
                 while (parent.IsValid() && parent != gridId)
                 {
+                    // Get the entity prototype to make smarter containment decisions
+                    var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(parent);
+                    var parentProto = meta?.EntityPrototype?.ID ?? string.Empty;
+                    
+                    // Allow infrastructure entities even if they have complex hierarchies
+                    if (parentProto.Contains("Pipe") || parentProto.Contains("Cable") || 
+                        parentProto.Contains("Conduit") || parentProto.Contains("Atmos") ||
+                        parentProto.Contains("Wire") || parentProto.Contains("Junction"))
+                    {
+                        return false;
+                    }
+                    
                     // If we find a parent that has a ContainerManagerComponent, this entity is contained
+                    // BUT exclude certain infrastructure containers that should be serialized
                     if (_entityManager.HasComponent<ContainerManagerComponent>(parent))
                     {
+                        // Allow entities in certain "infrastructure" containers
+                        if (parentProto.Contains("Pipe") || parentProto.Contains("Machine") || 
+                            parentProto.Contains("Console") || parentProto.Contains("Computer"))
+                        {
+                            return false;
+                        }
                         return true;
                     }
                     
