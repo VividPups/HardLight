@@ -81,4 +81,4 @@ shipyard-console-engine-Uranium = Uranium
 shipyard-console-engine-Bananium = Bananium
 
 ## Error Messages
-shipyard-console-checksum-failure = [bold][color=red]WARNING:[/color][/bold] Ship data integrity compromised! Vessel manifest appears corrupted or tampered with. Loading procedure aborted. Contact your local Colonial Command Systems Administrator immediately.
+shipyard-console-checksum-failure = WARNING: Vessel manifest corrupted! Loading aborted. Contact Colonial Command immediately.

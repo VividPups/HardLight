@@ -57,7 +57,6 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     [Dependency] private readonly IEntityManager _entityManager = default!;
     [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
     [Dependency] private readonly IServerNetManager _netManager = default!; // Ensure this is present
-    [Dependency] private readonly SharedPopupSystem _popup = default!;
 
     public MapId? ShipyardMap { get; private set; }
     private float _shuttleIndex;
@@ -128,19 +127,34 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 throw new InvalidOperationException($"A ship with the original ID {shipGridData.Metadata.OriginalGridId} already exists on the server.");
             }
 
-            // Find a shipyard console first to determine spawn location
+            // Find a shipyard console with an ID card inserted
             var consoles = EntityQueryEnumerator<ShipyardConsoleComponent>();
             EntityUid? targetConsole = null;
+            EntityUid? idCardInConsole = null;
             
             while (consoles.MoveNext(out var consoleUid, out var console))
             {
-                targetConsole = consoleUid;
-                break; // Use the first available console
+                // Check if this console has an ID card inserted (like in OnPurchaseMessage)
+                if (console.TargetIdSlot.ContainerSlot?.ContainedEntity is { Valid: true } targetId)
+                {
+                    if (HasComp<IdCardComponent>(targetId))
+                    {
+                        targetConsole = consoleUid;
+                        idCardInConsole = targetId;
+                        break;
+                    }
+                }
             }
 
-            if (!targetConsole.HasValue || !TryComp<TransformComponent>(targetConsole.Value, out var consoleXform) || consoleXform.GridUid == null)
+            if (!targetConsole.HasValue || !idCardInConsole.HasValue)
             {
-                _sawmill.Error($"No suitable shipyard console found for ship loading.");
+                _sawmill.Error($"No shipyard console with ID card found for ship loading.");
+                return;
+            }
+
+            if (!TryComp<TransformComponent>(targetConsole.Value, out var consoleXform) || consoleXform.GridUid == null)
+            {
+                _sawmill.Error($"Shipyard console transform invalid for ship loading.");
                 return;
             }
 
@@ -206,48 +220,24 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 _sawmill.Info($"Attempted to dock ship {newShipGridUid} to console grid {targetGrid}");
             }
 
-            // Find the player's entity to associate with the deed
-            var playerEntityQuery = EntityQueryEnumerator<ActorComponent>();
-            EntityUid? playerEntity = null;
-            
-            while (playerEntityQuery.MoveNext(out var actor, out var actorComp))
-            {
-                if (actorComp.PlayerSession == playerSession)
-                {
-                    playerEntity = actor;
-                    break;
-                }
-            }
+            // Add deed to the ID card in the console
+            var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardInConsole.Value);
+            AssignShuttleDeedProperties((idCardInConsole.Value, deedComponent), newShipGridUid, shipName, playerSession.Name, false);
+            _sawmill.Info($"Added deed to ID card in console {idCardInConsole.Value}");
 
-            if (playerEntity != null)
-            {
-                // Find the player's ID card entity and add deed to it
-                // Check if the player is holding an ID card or has one equipped
-                var idCardEntity = FindPlayerIdCard(playerEntity.Value);
-                if (idCardEntity != null)
-                {
-                    var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardEntity.Value);
-                    AssignShuttleDeedProperties((idCardEntity.Value, deedComponent), newShipGridUid, shipName, playerSession.Name, false);
-                    _sawmill.Info($"Added deed to player's ID card entity {idCardEntity.Value}");
-                }
-                else
-                {
-                    _sawmill.Warning($"Could not find ID card for player {playerSession.Name}");
-                }
-            }
-
-            // Also add deed to the ship itself (like purchased ships)
+            // Also add deed to the ship itself (like purchased ships) but mark as loaded (not purchasable)
             var shipDeedComponent = EnsureComp<ShuttleDeedComponent>(newShipGridUid);
-            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, shipName, playerSession.Name, false);
+            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, shipName, playerSession.Name, true); // Mark as purchased with voucher to prevent sale
 
             // Station information already set up above during station creation
 
             // Send radio announcement like purchased ships do
             if (TryComp<ShipyardConsoleComponent>(targetConsole.Value, out var consoleComponent))
             {
-                SendLoadMessage(targetConsole.Value, playerEntity ?? EntityUid.Invalid, shipName, consoleComponent.ShipyardChannel);
+                var playerEntity = playerSession.AttachedEntity ?? EntityUid.Invalid;
+                SendLoadMessage(targetConsole.Value, playerEntity, shipName, consoleComponent.ShipyardChannel);
                 if (consoleComponent.SecretShipyardChannel is { } secretChannel)
-                    SendLoadMessage(targetConsole.Value, playerEntity ?? EntityUid.Invalid, shipName, secretChannel, secret: true);
+                    SendLoadMessage(targetConsole.Value, playerEntity, shipName, secretChannel, secret: true);
                 _sawmill.Info($"Sent radio announcements for loaded ship {shipName}");
             }
 
@@ -279,26 +269,6 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         }
     }
 
-    private EntityUid? FindPlayerIdCard(EntityUid playerEntity)
-    {
-        // Check if the player has an ID card equipped or in inventory
-        // This is a simplified approach - in a real system you'd check equipment slots
-        
-        // Look for entities with IdCardComponent that the player owns/has
-        var idCardQuery = EntityQueryEnumerator<IdCardComponent>();
-        while (idCardQuery.MoveNext(out var cardUid, out var idCard))
-        {
-            // Check if this ID card is associated with the player (simplified check)
-            // In a more complete system, you'd check equipment slots, inventory, etc.
-            if (TryComp<TransformComponent>(cardUid, out var cardTransform) &&
-                cardTransform.ParentUid == playerEntity)
-            {
-                return cardUid;
-            }
-        }
-        
-        return null;
-    }
     public override void Shutdown()
     {
         _configManager.UnsubValueChanged(NFCCVars.Shipyard, SetShipyardEnabled);
