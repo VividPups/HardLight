@@ -28,7 +28,7 @@ using System;
 using Robust.Shared.Log; // ADDED: For Logger
 
 // using Content.Shared._NF.Shipyard.Systems; // REMOVED: Not needed, SharedShipyardSystem is in Content.Shared._NF.Shipyard
-using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage
+using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage, ShipConvertedToSecureFormatMessage
 using Content.Shared.Access.Components; // For IdCardComponent
 using Robust.Shared.Map.Components; // For MapGridComponent
 using Content.Server._NF.StationEvents.Components; // For LinkedLifecycleGridParentComponent
@@ -131,7 +131,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         try
         {
             _sawmill.Debug($"Attempting to deserialize YAML data for player {playerSession.Name}");
-            var shipGridData = shipSerializationSystem.DeserializeShipGridDataFromYaml(message.YamlData, playerSession.UserId);
+            var shipGridData = shipSerializationSystem.DeserializeShipGridDataFromYaml(message.YamlData, playerSession.UserId, out bool wasLegacyConverted);
 
             // Duplicate ship detection using original grid ID
             _sawmill.Debug($"Checking for duplicate ship with OriginalGridId: {shipGridData.Metadata.OriginalGridId}");
@@ -288,6 +288,33 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             
             // Admin log for ship loading
             _adminLogger.Add(LogType.ShipYardUsage, LogImpact.Medium, $"{playerSession.Name} loaded ship {finalShipName} (Original ID: {shipGridData.Metadata.OriginalGridId}) via {ToPrettyString(targetConsole.Value)}");
+            
+            // Handle legacy ship conversion - force update the file to new secure format
+            if (wasLegacyConverted)
+            {
+                _sawmill.Warning($"Legacy SHA ship detected - forcing conversion to secure format for player {playerSession.Name}");
+                
+                var convertedYaml = shipSerializationSystem.GetConvertedLegacyShipYaml(shipGridData, playerSession.Name, message.YamlData);
+                if (!string.IsNullOrEmpty(convertedYaml))
+                {
+                    // Send the converted YAML back to client to overwrite their file
+                    var conversionMessage = new ShipConvertedToSecureFormatMessage
+                    {
+                        ConvertedYamlData = convertedYaml,
+                        ShipName = shipGridData.Metadata.ShipName
+                    };
+                    
+                    RaiseNetworkEvent(conversionMessage, playerSession);
+                    _sawmill.Info($"Sent converted ship file to player {playerSession.Name} - legacy file automatically upgraded to secure format");
+                    
+                    // Admin log for security audit trail
+                    _adminLogger.Add(LogType.ShipYardUsage, LogImpact.High, $"Legacy SHA ship '{finalShipName}' automatically converted to secure format for player {playerSession.Name}");
+                }
+                else
+                {
+                    _sawmill.Error($"Failed to generate converted YAML for legacy ship - player {playerSession.Name} should manually re-save their ship");
+                }
+            }
             
             _sawmill.Info($"Successfully loaded and docked ship {shipGridData.Metadata.ShipName} for player {playerSession.Name}");
         }

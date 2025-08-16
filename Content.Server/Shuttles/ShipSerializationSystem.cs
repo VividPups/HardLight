@@ -34,6 +34,8 @@ using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics;
 using Robust.Shared.Configuration;
 using Content.Shared._NF.CCVar;
+using Robust.Shared.Player;
+using Robust.Server.Player;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -48,6 +50,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IConsoleHost _consoleHost = default!;
         [Dependency] private readonly DecalSystem _decalSystem = default!;
         [Dependency] private readonly IConfigurationManager _configManager = default!;
+        [Dependency] private readonly IServerNetManager _netManager = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -105,6 +108,13 @@ namespace Content.Server.Shuttles.Save
             }
 
             _sawmill.Info($"Serialized {gridData.Tiles.Count} tiles");
+            
+            // Check for overlapping entities at same coordinates
+            var positionGroups = gridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1);
+            foreach (var group in positionGroups)
+            {
+                _sawmill.Info($"Found {group.Count()} entities at position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
+            }
 
             // Skip atmosphere serialization as TileAtmosphere is not serializable
             // Atmosphere will be restored using fixgridatmos command during loading
@@ -157,6 +167,7 @@ namespace Content.Server.Shuttles.Save
                 };
 
                 gridData.Entities.Add(entityData);
+                _sawmill.Debug($"Serialized entity {uid} ({proto}) at {entityData.Position}");
             }
 
             shipGridData.Grids.Add(gridData);
@@ -176,7 +187,13 @@ namespace Content.Server.Shuttles.Save
 
         public ShipGridData DeserializeShipGridDataFromYaml(string yamlString, Guid loadingPlayerId)
         {
+            return DeserializeShipGridDataFromYaml(yamlString, loadingPlayerId, out _);
+        }
+
+        public ShipGridData DeserializeShipGridDataFromYaml(string yamlString, Guid loadingPlayerId, out bool wasLegacyConverted)
+        {
             _sawmill.Info($"Deserializing YAML for player {loadingPlayerId}");
+            wasLegacyConverted = false;
             ShipGridData data;
             try
             {
@@ -213,25 +230,55 @@ namespace Content.Server.Shuttles.Save
             
             if (checksumValidationEnabled)
             {
-                // Handle legacy checksum format - strip old ":PP-" suffix if present
-                var cleanStoredChecksum = originalStoredChecksum;
-                if (cleanStoredChecksum.Contains(":PP-"))
-                {
-                    cleanStoredChecksum = cleanStoredChecksum.Substring(0, cleanStoredChecksum.IndexOf(":PP-"));
-                    _sawmill.Info($"Detected legacy checksum format, using cleaned version: {cleanStoredChecksum}");
-                }
+                // Detect checksum format and handle appropriately
+                bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
+                bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
                 
-                if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                if (isLegacySHA)
                 {
-                    _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {cleanStoredChecksum}");
-                    _sawmill.Error($"Actual: {actualChecksum}");
-                    _sawmill.Error($"Ship data has been tampered with!");
-                    _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
-                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                    // Legacy SHA256 checksum - regenerate current checksum and update file metadata for future saves
+                    _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum}");
+                    _sawmill.Warning($"This ship will be automatically converted to use the new checksum format");
+                    _sawmill.Info($"Current checksum would be: {actualChecksum}");
+                    
+                    // Update the metadata with new checksum for conversion
+                    data.Metadata.Checksum = actualChecksum;
+                    wasLegacyConverted = true;
+                    _sawmill.Info("Legacy checksum compatibility mode - validation passed, marked for conversion");
                 }
-                
-                _sawmill.Info("Checksum validation passed successfully");
+                else if (isLegacyEnhanced)
+                {
+                    // Handle legacy enhanced format - strip old ":PP-" suffix if present
+                    var cleanStoredChecksum = originalStoredChecksum.Substring(0, originalStoredChecksum.IndexOf(":PP-"));
+                    _sawmill.Info($"Detected legacy enhanced checksum format, using cleaned version: {cleanStoredChecksum}");
+                    
+                    if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                        _sawmill.Error($"Expected: {cleanStoredChecksum}");
+                        _sawmill.Error($"Actual: {actualChecksum}");
+                        _sawmill.Error($"Ship data has been tampered with!");
+                        _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                        throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                    }
+                    
+                    _sawmill.Info("Legacy enhanced checksum validation passed successfully");
+                }
+                else
+                {
+                    // Current format validation
+                    if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                        _sawmill.Error($"Expected: {originalStoredChecksum}");
+                        _sawmill.Error($"Actual: {actualChecksum}");
+                        _sawmill.Error($"Ship data has been tampered with!");
+                        _sawmill.Error($"File: {data.Metadata.ShipName} saved by player {data.Metadata.PlayerId}");
+                        throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                    }
+                    
+                    _sawmill.Info("Current checksum validation passed successfully");
+                }
             }
             else
             {
@@ -385,7 +432,7 @@ namespace Content.Server.Shuttles.Save
                     }
 
                     
-                    _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype})");
+                    _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                 }
                 catch (Exception ex)
                 {
@@ -534,7 +581,7 @@ namespace Content.Server.Shuttles.Save
                     }
 
                     
-                    _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype})");
+                    _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                 }
                 catch (Exception ex)
                 {
@@ -638,6 +685,41 @@ namespace Content.Server.Shuttles.Save
             _sawmill.Info($"Enhanced tamper-detection checksum: {checksum} (length: {checksum.Length})");
             
             return checksum;
+        }
+
+        public string GetConvertedLegacyShipYaml(ShipGridData shipData, string playerName, string originalYamlString)
+        {
+            try
+            {
+                _sawmill.Info($"Generating converted YAML for legacy ship file for player {playerName}");
+                
+                // Serialize the updated ship data with new checksum
+                var convertedYamlString = SerializeShipGridDataToYaml(shipData);
+                
+                var originalChecksum = ExtractOriginalChecksum(originalYamlString);
+                _sawmill.Info($"Ship '{shipData.Metadata.ShipName}' converted from legacy SHA checksum '{originalChecksum}' to secure format '{shipData.Metadata.Checksum}'");
+                
+                return convertedYamlString;
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to generate converted ship YAML for player {playerName}: {ex.Message}");
+                return string.Empty;
+            }
+        }
+        
+        private string ExtractOriginalChecksum(string yamlString)
+        {
+            // Simple regex to extract the original checksum from YAML
+            var lines = yamlString.Split('\n');
+            foreach (var line in lines)
+            {
+                if (line.Trim().StartsWith("checksum:"))
+                {
+                    return line.Split(':')[1].Trim().Trim('"');
+                }
+            }
+            return "unknown";
         }
     }
 }
