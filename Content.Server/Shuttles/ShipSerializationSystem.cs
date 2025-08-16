@@ -36,6 +36,11 @@ using Robust.Shared.Configuration;
 using Content.Shared._NF.CCVar;
 using Robust.Shared.Player;
 using Robust.Server.Player;
+using Content.Shared.Chemistry.Components;
+using Content.Shared.Chemistry.Components.SolutionManager;
+using Content.Shared.Paper;
+using Content.Shared.Stacks;
+using Robust.Shared.Serialization.Markdown;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -51,6 +56,7 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly DecalSystem _decalSystem = default!;
         [Dependency] private readonly IConfigurationManager _configManager = default!;
         [Dependency] private readonly IServerNetManager _netManager = default!;
+        [Dependency] private readonly SharedContainerSystem _containerSystem = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -134,7 +140,9 @@ namespace Content.Server.Shuttles.Save
                 _sawmill.Info("No decal component found on grid, decals will not be preserved");
             }
 
-            // Simplified entity serialization - only entities directly on grid (not in containers)
+            // Enhanced entity serialization - includes all entities on grid and in containers
+            var serializedEntities = new HashSet<EntityUid>();
+            
             foreach (var entity in _entityManager.EntityQuery<TransformComponent>())
             {
                 if (entity.GridUid != gridId)
@@ -142,27 +150,23 @@ namespace Content.Server.Shuttles.Save
 
                 var uid = entity.Owner;
                 var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(uid);
-                
-                // Skip entities that are inside containers (items in lockers, pockets, etc.)
-                if (IsEntityContained(uid, gridId))
-                {
-                    _sawmill.Debug($"Skipping entity {uid} ({meta?.EntityPrototype?.ID}) - inside container");
-                    continue;
-                }
-                
                 var proto = meta?.EntityPrototype?.ID ?? string.Empty;
 
-                var entityData = new EntityData
+                // Serialize all entities, including contained ones
+                var entityData = SerializeEntity(uid, entity, proto, gridId);
+                if (entityData != null)
                 {
-                    EntityId = uid.ToString(),
-                    Prototype = proto,
-                    Position = new Vector2((float)Math.Round(entity.LocalPosition.X, 3), (float)Math.Round(entity.LocalPosition.Y, 3)),
-                    Rotation = (float)Math.Round(entity.LocalRotation.Theta, 3)
-                };
-
-                gridData.Entities.Add(entityData);
-                _sawmill.Debug($"Serialized entity {uid} ({proto}) at {entityData.Position}");
+                    gridData.Entities.Add(entityData);
+                    serializedEntities.Add(uid);
+                    _sawmill.Debug($"Serialized entity {uid} ({proto}) - Container: {entityData.IsContained}");
+                }
             }
+
+            // Also serialize entities that are contained but might not be in the grid query
+            SerializeContainedEntities(gridId, gridData, serializedEntities);
+
+            // Validate container relationships before finalizing
+            ValidateContainerRelationships(gridData);
 
             shipGridData.Grids.Add(gridData);
             
@@ -238,6 +242,8 @@ namespace Content.Server.Shuttles.Save
                 // Detect checksum format and handle appropriately
                 bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
                 bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
+                bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
+                bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
                 
                 if (isLegacySHA)
                 {
@@ -269,9 +275,21 @@ namespace Content.Server.Shuttles.Save
                     
                     _sawmill.Info("Legacy enhanced checksum validation passed successfully");
                 }
-                else
+                else if (isLegacyBasic)
                 {
-                    // Current format validation
+                    // Legacy basic format (before container support) - convert to new format
+                    _sawmill.Warning($"Legacy basic checksum detected: {originalStoredChecksum}");
+                    _sawmill.Warning($"This ship will be automatically converted to include container/component data");
+                    _sawmill.Info($"Current enhanced checksum would be: {actualChecksum}");
+                    
+                    // Update the metadata with new checksum for conversion
+                    data.Metadata.Checksum = actualChecksum;
+                    wasLegacyConverted = true;
+                    _sawmill.Info("Legacy basic checksum compatibility mode - validation passed, marked for conversion");
+                }
+                else if (isCurrentFormat)
+                {
+                    // Current enhanced format validation
                     if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
                     {
                         _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
@@ -282,7 +300,26 @@ namespace Content.Server.Shuttles.Save
                         throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
                     }
                     
-                    _sawmill.Info("Current checksum validation passed successfully");
+                    _sawmill.Info("Enhanced checksum validation passed successfully");
+                }
+                else
+                {
+                    // Unknown format - try to validate anyway but warn
+                    _sawmill.Warning($"Unknown checksum format detected: {originalStoredChecksum}");
+                    _sawmill.Warning($"Attempting validation with current format...");
+                    
+                    if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Warning($"Checksum validation failed for unknown format");
+                        _sawmill.Info($"Expected: {originalStoredChecksum}");
+                        _sawmill.Info($"Actual: {actualChecksum}");
+                        _sawmill.Warning($"Ship may have been modified or saved with different version");
+                        // Don't throw for unknown formats - allow loading but log warning
+                    }
+                    else
+                    {
+                        _sawmill.Info("Unknown format checksum validation passed");
+                    }
                 }
             }
             else
@@ -414,50 +451,27 @@ namespace Content.Server.Shuttles.Save
                 _sawmill.Info("No decal data found, decals will not be restored");
             }
 
-            // Reconstruct entities with smart overlap handling
-            _sawmill.Info($"Starting entity reconstruction for {primaryGridData.Entities.Count} entities");
+            // Two-phase entity reconstruction to handle containers properly
+            _sawmill.Info($"Starting two-phase entity reconstruction for {primaryGridData.Entities.Count} entities");
             
-            // Group entities by position to handle overlapping entities intelligently
-            var entitiesByPosition = primaryGridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).ToList();
-            var overlappingPositions = entitiesByPosition.Where(g => g.Count() > 1).ToList();
-            
-            if (overlappingPositions.Any())
-            {
-                _sawmill.Warning($"Found {overlappingPositions.Count} positions with multiple entities during reconstruction:");
-                foreach (var group in overlappingPositions)
-                {
-                    _sawmill.Warning($"  Position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
-                }
-            }
-            
+            var entityIdMapping = new Dictionary<string, EntityUid>();
             var spawnedEntities = new List<(EntityUid entity, string prototype, Vector2 position)>();
-            var spawnedPositions = new HashSet<(float x, float y)>();
             
-            // Define spawn priority order - infrastructure first, then furniture, then items
-            var entityPriority = new Dictionary<string, int>();
-            foreach (var entityData in primaryGridData.Entities)
+            // Check if this is a legacy save without container data
+            var hasContainerData = primaryGridData.Entities.Any(e => e.IsContainer || e.IsContained);
+            if (!hasContainerData)
             {
-                var proto = entityData.Prototype.ToLower();
-                if (proto.Contains("pipe") || proto.Contains("cable") || proto.Contains("wire") || proto.Contains("conduit"))
-                    entityPriority[entityData.Prototype] = 1; // Highest priority
-                else if (proto.Contains("wall") || proto.Contains("floor") || proto.Contains("door"))
-                    entityPriority[entityData.Prototype] = 2;
-                else if (proto.Contains("light") || proto.Contains("machine") || proto.Contains("console"))
-                    entityPriority[entityData.Prototype] = 3;
-                else
-                    entityPriority[entityData.Prototype] = 4; // Lowest priority
+                _sawmill.Info("Legacy save detected - no container data found, using single-phase reconstruction");
+                ReconstructEntitiesLegacyMode(primaryGridData, newGrid, entityIdMapping);
+                return newGrid.Owner;
             }
             
-            // Sort entities by priority, then by position for deterministic ordering
-            var sortedEntities = primaryGridData.Entities
-                .OrderBy(e => entityPriority.GetValueOrDefault(e.Prototype, 4))
-                .ThenBy(e => e.Position.X)
-                .ThenBy(e => e.Position.Y)
-                .ToList();
+            // Phase 1: Spawn all non-contained entities (containers, infrastructure, furniture)
+            _sawmill.Info("Phase 1: Spawning non-contained entities");
+            var nonContainedEntities = primaryGridData.Entities.Where(e => !e.IsContained).ToList();
             
-            foreach (var entityData in sortedEntities)
+            foreach (var entityData in nonContainedEntities)
             {
-                // Skip entities with empty or null prototypes
                 if (string.IsNullOrEmpty(entityData.Prototype))
                 {
                     _sawmill.Debug($"Skipping entity with empty prototype at {entityData.Position}");
@@ -467,47 +481,95 @@ namespace Content.Server.Shuttles.Save
                 try
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
-                    var posKey = (entityData.Position.X, entityData.Position.Y);
+                    var newEntity = SpawnEntityWithComponents(entityData, coordinates);
                     
-                    // Check if this position already has an entity spawned
-                    if (spawnedPositions.Contains(posKey))
+                    if (newEntity != null)
                     {
-                        var proto = entityData.Prototype.ToLower();
-                        // Allow infrastructure entities to stack (pipes, cables, etc.)
-                        if (!(proto.Contains("pipe") || proto.Contains("cable") || proto.Contains("wire") || 
-                              proto.Contains("conduit") || proto.Contains("junction") || proto.Contains("atmos")))
-                        {
-                            _sawmill.Warning($"Skipping duplicate entity {entityData.Prototype} at occupied position {entityData.Position}");
-                            continue;
-                        }
+                        entityIdMapping[entityData.EntityId] = newEntity.Value;
+                        spawnedEntities.Add((newEntity.Value, entityData.Prototype, entityData.Position));
+                        _sawmill.Debug($"Phase 1: Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                     }
-                    
-                    var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
-                    
-                    // Apply rotation if it exists
-                    if (Math.Abs(entityData.Rotation) > 0.001f)
-                    {
-                        var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
-                        transform.LocalRotation = new Angle(entityData.Rotation);
-                    }
-
-                    spawnedEntities.Add((newEntity, entityData.Prototype, entityData.Position));
-                    spawnedPositions.Add(posKey);
-                    _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype} at {entityData.Position}: {ex.Message}");
-                    // Don't throw, continue with other entities
+                    _sawmill.Error($"Phase 1: Failed to spawn entity {entityData.Prototype} at {entityData.Position}: {ex.Message}");
                 }
             }
             
-            // Final verification - check if we lost any entities at overlapping positions
-            _sawmill.Info($"Entity reconstruction complete. Spawned {spawnedEntities.Count} entities");
+            _sawmill.Info($"Phase 1 complete: Spawned {spawnedEntities.Count} non-contained entities");
             
-            if (overlappingPositions.Any())
+            // Phase 2: Spawn contained entities and insert them into containers
+            _sawmill.Info("Phase 2: Spawning contained entities and inserting into containers");
+            var containedEntities = primaryGridData.Entities.Where(e => e.IsContained).ToList();
+            var containedSpawned = 0;
+            var containedFailed = 0;
+            
+            foreach (var entityData in containedEntities)
             {
-                foreach (var group in overlappingPositions)
+                if (string.IsNullOrEmpty(entityData.Prototype))
+                {
+                    _sawmill.Debug($"Skipping contained entity with empty prototype");
+                    continue;
+                }
+
+                try
+                {
+                    // Spawn the entity in a temporary location (will be moved to container)
+                    var tempCoordinates = new EntityCoordinates(newGrid.Owner, Vector2.Zero);
+                    var containedEntity = SpawnEntityWithComponents(entityData, tempCoordinates);
+                    
+                    if (containedEntity != null)
+                    {
+                        entityIdMapping[entityData.EntityId] = containedEntity.Value;
+                        
+                        // Try to insert into the parent container
+                        if (!string.IsNullOrEmpty(entityData.ParentContainerEntity) && 
+                            !string.IsNullOrEmpty(entityData.ContainerSlot) &&
+                            entityIdMapping.TryGetValue(entityData.ParentContainerEntity, out var parentContainer))
+                        {
+                            if (InsertIntoContainer(containedEntity.Value, parentContainer, entityData.ContainerSlot))
+                            {
+                                containedSpawned++;
+                                _sawmill.Debug($"Phase 2: Spawned and inserted entity {containedEntity} ({entityData.Prototype}) into container {parentContainer}");
+                            }
+                            else
+                            {
+                                // If insertion fails, move to a nearby position on the grid
+                                var fallbackPos = FindNearbyPosition(newGrid.Owner, entityData.Position);
+                                var transform = _entityManager.GetComponent<TransformComponent>(containedEntity.Value);
+                                transform.Coordinates = new EntityCoordinates(newGrid.Owner, fallbackPos);
+                                containedFailed++;
+                                _sawmill.Warning($"Phase 2: Failed to insert {entityData.Prototype} into container, placed on floor at {fallbackPos}");
+                            }
+                        }
+                        else
+                        {
+                            // Parent container not found, place on floor
+                            var fallbackPos = FindNearbyPosition(newGrid.Owner, entityData.Position);
+                            var transform = _entityManager.GetComponent<TransformComponent>(containedEntity.Value);
+                            transform.Coordinates = new EntityCoordinates(newGrid.Owner, fallbackPos);
+                            containedFailed++;
+                            _sawmill.Warning($"Phase 2: Parent container not found for {entityData.Prototype}, placed on floor at {fallbackPos}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Phase 2: Failed to spawn contained entity {entityData.Prototype}: {ex.Message}");
+                    containedFailed++;
+                }
+            }
+            
+            _sawmill.Info($"Phase 2 complete: {containedSpawned} contained entities inserted, {containedFailed} placed on floor");
+            
+            // Log comprehensive reconstruction statistics
+            LogReconstructionStats(primaryGridData, entityIdMapping, containedSpawned, containedFailed);
+            
+            // Final verification and cleanup
+            var finalOverlapCheck = primaryGridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1).ToList();
+            if (finalOverlapCheck.Any())
+            {
+                foreach (var group in finalOverlapCheck)
                 {
                     var spawnedAtPosition = spawnedEntities.Where(e => 
                         Math.Abs(e.position.X - group.Key.X) < 0.01f && 
@@ -756,7 +818,7 @@ namespace Content.Server.Shuttles.Save
 
         private string GenerateChecksum(List<GridData> grids)
         {
-            // Enhanced tamper-detection checksum using detailed entity data
+            // Enhanced tamper-detection checksum using detailed entity data including containers and components
             var checksumBuilder = new StringBuilder();
             
             foreach (var grid in grids)
@@ -773,7 +835,7 @@ namespace Content.Server.Shuttles.Save
                     .Select(g => $"{g.Key.Substring(0, Math.Min(4, g.Key.Length))}{g.Count()}").ToList();
                 checksumBuilder.Append($"[{string.Join(",", tileTypeCounts)}]");
                 
-                // Entity summary  
+                // Entity summary with container information
                 var sortedEntities = grid.Entities.OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y).ToList();
                 checksumBuilder.Append($":E{sortedEntities.Count}");
                 
@@ -782,16 +844,34 @@ namespace Content.Server.Shuttles.Save
                     .Select(g => $"{g.Key.Substring(0, Math.Min(6, g.Key.Length))}{g.Count()}").ToList();
                 checksumBuilder.Append($"[{string.Join(",", entityProtoCounts)}]");
                 
-                // Position checksum for tamper detection
+                // Container relationship counts for tamper detection
+                var containerCount = sortedEntities.Count(e => e.IsContainer);
+                var containedCount = sortedEntities.Count(e => e.IsContained);
+                checksumBuilder.Append($":C{containerCount}x{containedCount}");
+                
+                // Component data integrity check
+                var totalComponents = sortedEntities.Sum(e => e.Components.Count);
+                var componentTypes = sortedEntities
+                    .SelectMany(e => e.Components)
+                    .GroupBy(c => c.Type)
+                    .OrderBy(g => g.Key)
+                    .Select(g => $"{g.Key.Substring(0, Math.Min(3, g.Key.Length))}{g.Count()}")
+                    .ToList();
+                checksumBuilder.Append($":CM{totalComponents}[{string.Join(",", componentTypes.Take(10))}]");
+                
+                // Position checksum for tamper detection (including container relationships)
                 var tileCoordSum = sortedTiles.Sum(t => t.X * 100 + t.Y);
                 var entityPosSum = (int)sortedEntities.Sum(e => e.Position.X * 100 + e.Position.Y * 100);
-                checksumBuilder.Append($":P{tileCoordSum + entityPosSum}");
+                var containerRelationSum = sortedEntities
+                    .Where(e => e.IsContained && !string.IsNullOrEmpty(e.ParentContainerEntity))
+                    .Sum(e => e.ParentContainerEntity!.GetHashCode() % 10000);
+                checksumBuilder.Append($":P{tileCoordSum + entityPosSum + containerRelationSum}");
                 
                 checksumBuilder.Append(";");
             }
             
             var checksum = checksumBuilder.ToString().TrimEnd(';');
-            _sawmill.Info($"Enhanced tamper-detection checksum: {checksum} (length: {checksum.Length})");
+            _sawmill.Info($"Enhanced container-aware tamper-detection checksum: {checksum} (length: {checksum.Length})");
             
             return checksum;
         }
@@ -829,6 +909,771 @@ namespace Content.Server.Shuttles.Save
                 }
             }
             return "unknown";
+        }
+
+        private List<ComponentData> SerializeEntityComponents(EntityUid entityUid)
+        {
+            var componentDataList = new List<ComponentData>();
+            
+            try
+            {
+                // Get all components on the entity
+                var metaData = _entityManager.GetComponent<MetaDataComponent>(entityUid);
+                foreach (var component in _entityManager.GetComponents(entityUid))
+                {
+                    // Skip certain components that shouldn't be serialized
+                    var componentType = component.GetType();
+                    if (ShouldSkipComponent(componentType))
+                        continue;
+
+                    try
+                    {
+                        var componentData = SerializeComponent(component);
+                        if (componentData != null)
+                            componentDataList.Add(componentData);
+                    }
+                    catch (Exception ex)
+                    {
+                        _sawmill.Warning($"Failed to serialize component {componentType.Name} on entity {entityUid}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to serialize components for entity {entityUid}: {ex.Message}");
+            }
+
+            return componentDataList;
+        }
+
+        private ComponentData? SerializeComponent(IComponent component)
+        {
+            try
+            {
+                var componentType = component.GetType();
+                var typeName = componentType.Name;
+
+                // Filter out problematic component types that shouldn't be serialized
+                if (IsProblematicComponent(componentType))
+                {
+                    _sawmill.Debug($"Skipping problematic component: {typeName}");
+                    return null;
+                }
+
+                // Special handling for solution components to ensure chemical preservation
+                if (component is SolutionContainerManagerComponent solutionManager)
+                {
+                    return SerializeSolutionComponent(solutionManager);
+                }
+
+                // Use RobustToolbox's serialization system to serialize the component
+                var node = _serializationManager.WriteValue(componentType, component, notNullableOverride: true);
+                var yamlData = _serializer.Serialize(node);
+
+                var componentData = new ComponentData
+                {
+                    Type = typeName,
+                    YamlData = yamlData,
+                    NetId = 0 // NetID not available in this context
+                };
+
+                // Log important component preservation
+                if (IsImportantComponent(componentType))
+                {
+                    _sawmill.Debug($"Preserved important component: {typeName}");
+                }
+
+                return componentData;
+            }
+            catch (Exception ex)
+            {
+                var componentType = component.GetType();
+                
+                // Don't log warnings for expected problematic components
+                if (IsProblematicComponent(componentType))
+                {
+                    _sawmill.Debug($"Expected serialization failure for component {componentType.Name}: {ex.Message}");
+                }
+                else
+                {
+                    _sawmill.Warning($"Failed to serialize component {componentType.Name}: {ex.Message}");
+                }
+                return null;
+            }
+        }
+
+        private bool IsProblematicComponent(Type componentType)
+        {
+            var typeName = componentType.Name;
+            
+            // Network/client-side components that cause serialization issues
+            if (typeName.Contains("Network") || typeName.Contains("Client") || typeName.Contains("Ui"))
+                return true;
+                
+            // Timing/temporary components that shouldn't be preserved
+            if (typeName.Contains("Timer") || typeName.Contains("Temporary") || typeName.Contains("Transient"))
+                return true;
+                
+            // Event/notification components
+            if (typeName.Contains("Event") || typeName.Contains("Alert") || typeName.Contains("Notification"))
+                return true;
+                
+            // Runtime/generated components
+            if (typeName.Contains("Runtime") || typeName.Contains("Generated") || typeName.Contains("Dynamic"))
+                return true;
+
+            return false;
+        }
+
+        private ComponentData? SerializeSolutionComponent(SolutionContainerManagerComponent solutionManager)
+        {
+            try
+            {
+                // Create a simplified representation of the solution data for better preservation
+                var solutionData = new Dictionary<string, object>();
+                
+                foreach (var (solutionName, solution) in solutionManager.Solutions)
+                {
+                    var solutionInfo = new Dictionary<string, object>
+                    {
+                        ["Volume"] = solution.Volume,
+                        ["MaxVolume"] = solution.MaxVolume,
+                        ["Temperature"] = solution.Temperature,
+                        ["Reagents"] = solution.Contents.ToDictionary(
+                            reagent => reagent.Reagent.Prototype, 
+                            reagent => (object)reagent.Quantity
+                        )
+                    };
+                    solutionData[solutionName] = solutionInfo;
+                }
+
+                var componentData = new ComponentData
+                {
+                    Type = "SolutionContainerManagerComponent",
+                    Properties = solutionData,
+                    NetId = 0 // NetID not available in this context
+                };
+
+                _sawmill.Info($"Preserved solution component with {solutionData.Count} solutions");
+                return componentData;
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Warning($"Failed to serialize solution component: {ex.Message}");
+                return null;
+            }
+        }
+
+        private bool ShouldSkipComponent(Type componentType)
+        {
+            var typeName = componentType.Name;
+            
+            // Skip transform components (position handled separately)
+            if (typeName == "TransformComponent")
+                return true;
+                
+            // Skip metadata components (handled separately)
+            if (typeName == "MetaDataComponent")
+                return true;
+                
+            // Skip physics components (usually regenerated)
+            if (typeName.Contains("Physics"))
+                return true;
+                
+            // Skip appearance/visual components (usually regenerated)
+            if (typeName.Contains("Appearance") || typeName.Contains("Sprite"))
+                return true;
+
+            // Skip network/client-side components
+            if (typeName.Contains("Eye") || typeName.Contains("Input") || typeName.Contains("UserInterface"))
+                return true;
+
+            return false;
+        }
+
+        private bool IsImportantComponent(Type componentType)
+        {
+            var typeName = componentType.Name;
+            
+            // Chemical/solution components - high priority for preservation
+            if (typeName.Contains("Solution") || typeName.Contains("Chemical"))
+                return true;
+                
+            // Paper and text components
+            if (typeName.Contains("Paper") || typeName.Contains("Book") || typeName.Contains("SignComponent"))
+                return true;
+                
+            // Storage and container components
+            if (typeName.Contains("Storage") || typeName.Contains("Container"))
+                return true;
+                
+            // Seed and plant components (GMO preservation)
+            if (typeName.Contains("Seed") || typeName.Contains("Plant") || typeName.Contains("Produce"))
+                return true;
+                
+            // Stack and quantity components
+            if (typeName.Contains("Stack") || typeName.Contains("Quantity"))
+                return true;
+                
+            // Power and battery components
+            if (typeName.Contains("Battery") || typeName.Contains("PowerCell"))
+                return true;
+                
+            // Generator and fuel components (PACMAN, AME, etc.)
+            if (typeName.Contains("Generator") || typeName.Contains("Fuel") || typeName.Contains("AME") || 
+                typeName.Contains("PACMAN") || typeName.Contains("Reactor") || typeName.Contains("Engine"))
+                return true;
+                
+            // Power/energy storage and distribution
+            if (typeName.Contains("Power") || typeName.Contains("Energy") || typeName.Contains("Charge"))
+                return true;
+                
+            // Machine state components
+            if (typeName.Contains("Machine") || typeName.Contains("Processor") || typeName.Contains("Fabricator"))
+                return true;
+
+            // Atmospheric components (for atmospheric engines, scrubbers, etc.)
+            if (typeName.Contains("Atmospheric") || typeName.Contains("Gas") || typeName.Contains("Atmos"))
+                return true;
+
+            // IFF and ship identification components
+            if (typeName.Contains("IFF") || typeName.Contains("Identification") || typeName.Contains("Identity"))
+                return true;
+
+            return false;
+        }
+
+        private void RestoreEntityComponents(EntityUid entityUid, List<ComponentData> componentDataList)
+        {
+            foreach (var componentData in componentDataList)
+            {
+                try
+                {
+                    RestoreComponent(entityUid, componentData);
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Warning($"Failed to restore component {componentData.Type} on entity {entityUid}: {ex.Message}");
+                }
+            }
+        }
+
+        private void RestoreComponent(EntityUid entityUid, ComponentData componentData)
+        {
+            try
+            {
+                // Special handling for solution components
+                if (componentData.Type == "SolutionContainerManagerComponent" && componentData.Properties.Any())
+                {
+                    RestoreSolutionComponent(entityUid, componentData);
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(componentData.YamlData))
+                    return;
+
+                // Filter out components that shouldn't be restored
+                var componentTypes = _entityManager.ComponentFactory.GetAllRefTypes()
+                    .Where(t => t.Name == componentData.Type || t.Name.EndsWith($".{componentData.Type}"))
+                    .ToList();
+
+                if (!componentTypes.Any())
+                {
+                    _sawmill.Debug($"Component type {componentData.Type} not found - may be from different version");
+                    return;
+                }
+
+                var componentType = componentTypes.First();
+                
+                // Skip problematic components during restoration too
+                if (IsProblematicComponent(componentType))
+                {
+                    _sawmill.Debug($"Skipping restoration of problematic component: {componentData.Type}");
+                    return;
+                }
+
+                // Deserialize the component data
+                var node = _deserializer.Deserialize<DataNode>(componentData.YamlData);
+                
+                // Ensure the entity has this component
+                if (!_entityManager.HasComponent(entityUid, componentType))
+                {
+                    try
+                    {
+                        var newComponent = (Component)Activator.CreateInstance(componentType)!;
+                        _entityManager.AddComponent(entityUid, newComponent);
+                    }
+                    catch (Exception ex)
+                    {
+                        _sawmill.Warning($"Failed to create component {componentData.Type}: {ex.Message}");
+                        return;
+                    }
+                }
+
+                // Get the existing component and populate it with saved data
+                var existingComponent = _entityManager.GetComponent(entityUid, componentType);
+                
+                try
+                {
+                    _serializationManager.PopulateDataDefinition(existingComponent, node);
+                    _sawmill.Debug($"Restored component {componentData.Type} on entity {entityUid}");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Warning($"Failed to populate component {componentData.Type} data: {ex.Message}");
+                    // Continue execution - partial restoration is better than none
+                }
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Warning($"Failed to restore component {componentData.Type} on entity {entityUid}: {ex.Message}");
+                // Don't throw - continue with other components
+            }
+        }
+
+        private void RestoreSolutionComponent(EntityUid entityUid, ComponentData componentData)
+        {
+            try
+            {
+                if (!_entityManager.TryGetComponent<SolutionContainerManagerComponent>(entityUid, out var solutionManager))
+                {
+                    _sawmill.Warning($"Entity {entityUid} does not have SolutionContainerManagerComponent to restore");
+                    return;
+                }
+
+                var restoredSolutions = 0;
+                foreach (var (solutionName, solutionDataObj) in componentData.Properties)
+                {
+                    if (solutionDataObj is not Dictionary<string, object> solutionInfo)
+                        continue;
+
+                    try
+                    {
+                        // Get or create the solution
+                        if (!solutionManager.Solutions.TryGetValue(solutionName, out var solution))
+                        {
+                            _sawmill.Warning($"Solution '{solutionName}' not found on entity {entityUid}");
+                            continue;
+                        }
+
+                        // Clear existing contents
+                        solution.RemoveAllSolution();
+
+                        // Restore solution properties
+                        if (solutionInfo.TryGetValue("Temperature", out var tempObj) && tempObj is double temperature)
+                        {
+                            solution.Temperature = (float)temperature;
+                        }
+
+                        // Restore reagents
+                        if (solutionInfo.TryGetValue("Reagents", out var reagentsObj) && 
+                            reagentsObj is Dictionary<string, object> reagents)
+                        {
+                            foreach (var (reagentId, quantityObj) in reagents)
+                            {
+                                if (quantityObj is double quantity && quantity > 0)
+                                {
+                                    // Add the reagent back to the solution
+                                    solution.AddReagent(reagentId, (float)quantity);
+                                }
+                            }
+                        }
+
+                        restoredSolutions++;
+                        var reagentCount = solutionInfo.ContainsKey("Reagents") && 
+                                          solutionInfo["Reagents"] is Dictionary<string, object> reagentDict ? 
+                                          reagentDict.Count : 0;
+                        _sawmill.Debug($"Restored solution '{solutionName}' with {reagentCount} reagents");
+                    }
+                    catch (Exception ex)
+                    {
+                        _sawmill.Warning($"Failed to restore solution '{solutionName}': {ex.Message}");
+                    }
+                }
+
+                _sawmill.Info($"Restored {restoredSolutions} solutions on entity {entityUid}");
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to restore solution component on entity {entityUid}: {ex.Message}");
+            }
+        }
+
+        private (string? parentContainerEntity, string? containerSlot) GetContainerInfo(EntityUid entityUid)
+        {
+            try
+            {
+                if (!_entityManager.TryGetComponent<TransformComponent>(entityUid, out var transform))
+                    return (null, null);
+
+                var parent = transform.ParentUid;
+                if (!parent.IsValid())
+                    return (null, null);
+
+                // Check if the parent has a container manager
+                if (!_entityManager.TryGetComponent<ContainerManagerComponent>(parent, out var containerManager))
+                    return (null, null);
+
+                // Find which container this entity is in
+                foreach (var container in containerManager.Containers.Values)
+                {
+                    if (container.Contains(entityUid))
+                    {
+                        return (parent.ToString(), container.ID);
+                    }
+                }
+
+                return (null, null);
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Warning($"Failed to get container info for entity {entityUid}: {ex.Message}");
+                return (null, null);
+            }
+        }
+
+        private bool HasContainers(EntityUid entityUid)
+        {
+            return _entityManager.HasComponent<ContainerManagerComponent>(entityUid);
+        }
+
+        private EntityData? SerializeEntity(EntityUid uid, TransformComponent transform, string prototype, EntityUid gridId)
+        {
+            try
+            {
+                // Get container relationship information
+                var (parentContainer, containerSlot) = GetContainerInfo(uid);
+                var isContained = parentContainer != null;
+                var isContainer = HasContainers(uid);
+
+                // Serialize component states
+                var components = SerializeEntityComponents(uid);
+
+                var entityData = new EntityData
+                {
+                    EntityId = uid.ToString(),
+                    Prototype = prototype,
+                    Position = new Vector2((float)Math.Round(transform.LocalPosition.X, 3), (float)Math.Round(transform.LocalPosition.Y, 3)),
+                    Rotation = (float)Math.Round(transform.LocalRotation.Theta, 3),
+                    Components = components,
+                    ParentContainerEntity = parentContainer,
+                    ContainerSlot = containerSlot,
+                    IsContainer = isContainer,
+                    IsContained = isContained
+                };
+
+                return entityData;
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to serialize entity {uid}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private void SerializeContainedEntities(EntityUid gridId, GridData gridData, HashSet<EntityUid> alreadySerialized)
+        {
+            // Find all entities that might be contained within grid entities but not directly on the grid
+            var containersToCheck = new Queue<EntityUid>();
+            
+            // Start with all container entities on the grid
+            foreach (var entityData in gridData.Entities.Where(e => e.IsContainer))
+            {
+                if (EntityUid.TryParse(entityData.EntityId, out var containerUid))
+                {
+                    containersToCheck.Enqueue(containerUid);
+                }
+            }
+
+            // Process containers recursively
+            while (containersToCheck.Count > 0)
+            {
+                var containerUid = containersToCheck.Dequeue();
+                
+                if (!_entityManager.TryGetComponent<ContainerManagerComponent>(containerUid, out var containerManager))
+                    continue;
+
+                foreach (var container in containerManager.Containers.Values)
+                {
+                    foreach (var containedEntity in container.ContainedEntities)
+                    {
+                        if (alreadySerialized.Contains(containedEntity))
+                            continue;
+
+                        try
+                        {
+                            var transform = _entityManager.GetComponent<TransformComponent>(containedEntity);
+                            var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(containedEntity);
+                            var proto = meta?.EntityPrototype?.ID ?? string.Empty;
+
+                            var entityData = SerializeEntity(containedEntity, transform, proto, gridId);
+                            if (entityData != null)
+                            {
+                                gridData.Entities.Add(entityData);
+                                alreadySerialized.Add(containedEntity);
+                                _sawmill.Debug($"Serialized contained entity {containedEntity} ({proto}) in container {containerUid}");
+
+                                // If this contained entity is also a container, check its contents
+                                if (entityData.IsContainer)
+                                {
+                                    containersToCheck.Enqueue(containedEntity);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _sawmill.Warning($"Failed to serialize contained entity {containedEntity}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+
+        private EntityUid? SpawnEntityWithComponents(EntityData entityData, EntityCoordinates coordinates)
+        {
+            try
+            {
+                // Spawn the basic entity
+                var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                
+                // Apply rotation if it exists
+                if (Math.Abs(entityData.Rotation) > 0.001f)
+                {
+                    var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
+                    transform.LocalRotation = new Angle(entityData.Rotation);
+                }
+
+                // Clear any default container contents to prevent duplicates
+                // This ensures saved containers don't get refilled with prototype defaults
+                if (entityData.IsContainer && _entityManager.TryGetComponent<ContainerManagerComponent>(newEntity, out var containerManager))
+                {
+                    foreach (var container in containerManager.Containers.Values)
+                    {
+                        // Clear default spawned items - we'll restore saved contents later
+                        var defaultItems = container.ContainedEntities.ToList();
+                        foreach (var defaultItem in defaultItems)
+                        {
+                            _containerSystem.Remove(defaultItem, container);
+                            _entityManager.DeleteEntity(defaultItem);
+                        }
+                    }
+                    _sawmill.Debug($"Cleared default contents from container {newEntity} - will restore saved contents");
+                }
+
+                // Restore component states
+                if (entityData.Components.Any())
+                {
+                    RestoreEntityComponents(newEntity, entityData.Components);
+                }
+
+                return newEntity;
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to spawn entity with components {entityData.Prototype}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private bool InsertIntoContainer(EntityUid entityToInsert, EntityUid containerEntity, string containerSlot)
+        {
+            try
+            {
+                if (!_entityManager.TryGetComponent<ContainerManagerComponent>(containerEntity, out var containerManager))
+                {
+                    _sawmill.Warning($"Container entity {containerEntity} does not have ContainerManagerComponent");
+                    return false;
+                }
+
+                if (!containerManager.TryGetContainer(containerSlot, out var container))
+                {
+                    _sawmill.Warning($"Container slot '{containerSlot}' not found on entity {containerEntity}");
+                    return false;
+                }
+
+                // Use the container system to properly insert the entity
+                if (_containerSystem.Insert(entityToInsert, container))
+                {
+                    _sawmill.Debug($"Successfully inserted entity {entityToInsert} into container {containerEntity} slot '{containerSlot}'");
+                    return true;
+                }
+                else
+                {
+                    _sawmill.Warning($"Failed to insert entity {entityToInsert} into container {containerEntity} slot '{containerSlot}' - container may be full");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Error inserting entity {entityToInsert} into container {containerEntity}: {ex.Message}");
+                return false;
+            }
+        }
+
+        private Vector2 FindNearbyPosition(EntityUid gridEntity, Vector2 originalPosition)
+        {
+            // Try to find a nearby unoccupied position
+            var searchPositions = new[]
+            {
+                originalPosition,
+                originalPosition + new Vector2(1, 0),
+                originalPosition + new Vector2(-1, 0),
+                originalPosition + new Vector2(0, 1),
+                originalPosition + new Vector2(0, -1),
+                originalPosition + new Vector2(1, 1),
+                originalPosition + new Vector2(-1, -1),
+                originalPosition + new Vector2(1, -1),
+                originalPosition + new Vector2(-1, 1)
+            };
+
+            foreach (var testPos in searchPositions)
+            {
+                var coords = new EntityCoordinates(gridEntity, testPos);
+                
+                // Check if position is occupied (basic check)
+                var entitiesAtPos = _entityManager.GetEntitiesIntersecting(coords, 0.1f);
+                if (!entitiesAtPos.Any())
+                {
+                    return testPos;
+                }
+            }
+
+            // If all nearby positions are occupied, just use the original position
+            return originalPosition;
+        }
+
+        private void ValidateContainerRelationships(GridData gridData)
+        {
+            try
+            {
+                var containerEntities = gridData.Entities.Where(e => e.IsContainer).ToList();
+                var containedEntities = gridData.Entities.Where(e => e.IsContained).ToList();
+                var entityIds = gridData.Entities.Select(e => e.EntityId).ToHashSet();
+
+                _sawmill.Info($"Validating container relationships: {containerEntities.Count} containers, {containedEntities.Count} contained entities");
+
+                var orphanedEntities = 0;
+                var invalidContainers = 0;
+
+                foreach (var containedEntity in containedEntities)
+                {
+                    // Check if parent container exists
+                    if (string.IsNullOrEmpty(containedEntity.ParentContainerEntity))
+                    {
+                        _sawmill.Warning($"Contained entity {containedEntity.EntityId} has no parent container specified");
+                        orphanedEntities++;
+                        continue;
+                    }
+
+                    if (!entityIds.Contains(containedEntity.ParentContainerEntity))
+                    {
+                        _sawmill.Warning($"Contained entity {containedEntity.EntityId} references non-existent parent container {containedEntity.ParentContainerEntity}");
+                        orphanedEntities++;
+                        continue;
+                    }
+
+                    // Check if parent is actually marked as a container
+                    var parentEntity = gridData.Entities.FirstOrDefault(e => e.EntityId == containedEntity.ParentContainerEntity);
+                    if (parentEntity != null && !parentEntity.IsContainer)
+                    {
+                        _sawmill.Warning($"Entity {containedEntity.EntityId} is contained in {containedEntity.ParentContainerEntity}, but parent is not marked as container");
+                        invalidContainers++;
+                    }
+
+                    // Check if container slot is specified
+                    if (string.IsNullOrEmpty(containedEntity.ContainerSlot))
+                    {
+                        _sawmill.Warning($"Contained entity {containedEntity.EntityId} has no container slot specified");
+                    }
+                }
+
+                if (orphanedEntities > 0 || invalidContainers > 0)
+                {
+                    _sawmill.Warning($"Container validation found issues: {orphanedEntities} orphaned entities, {invalidContainers} invalid containers");
+                }
+                else
+                {
+                    _sawmill.Info("Container relationship validation passed successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Error($"Failed to validate container relationships: {ex.Message}");
+            }
+        }
+
+        private void ReconstructEntitiesLegacyMode(GridData gridData, MapGridComponent newGrid, Dictionary<string, EntityUid> entityIdMapping)
+        {
+            _sawmill.Info("Using legacy reconstruction mode for backward compatibility");
+            
+            var spawnedCount = 0;
+            var failedCount = 0;
+            
+            foreach (var entityData in gridData.Entities)
+            {
+                if (string.IsNullOrEmpty(entityData.Prototype))
+                {
+                    _sawmill.Debug($"Skipping entity with empty prototype at {entityData.Position}");
+                    continue;
+                }
+
+                try
+                {
+                    var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                    var newEntity = SpawnEntityWithComponents(entityData, coordinates);
+                    
+                    if (newEntity != null)
+                    {
+                        entityIdMapping[entityData.EntityId] = newEntity.Value;
+                        spawnedCount++;
+                        _sawmill.Debug($"Legacy: Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
+                    }
+                    else
+                    {
+                        failedCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Legacy: Failed to spawn entity {entityData.Prototype} at {entityData.Position}: {ex.Message}");
+                    failedCount++;
+                }
+            }
+            
+            _sawmill.Info($"Legacy reconstruction complete: {spawnedCount} entities spawned, {failedCount} failed");
+        }
+
+        private void LogReconstructionStats(GridData gridData, Dictionary<string, EntityUid> entityIdMapping, int containedSpawned, int containedFailed)
+        {
+            try
+            {
+                var totalEntities = gridData.Entities.Count;
+                var containerEntities = gridData.Entities.Count(e => e.IsContainer);
+                var containedEntities = gridData.Entities.Count(e => e.IsContained);
+                var nonContainedEntities = gridData.Entities.Count(e => !e.IsContained);
+                var successfullyMapped = entityIdMapping.Count;
+
+                _sawmill.Info("=== Ship Reconstruction Statistics ===");
+                _sawmill.Info($"Total entities in save: {totalEntities}");
+                _sawmill.Info($"  - Non-contained entities: {nonContainedEntities}");
+                _sawmill.Info($"  - Contained entities: {containedEntities}");
+                _sawmill.Info($"  - Container entities: {containerEntities}");
+                _sawmill.Info($"Successfully spawned entities: {successfullyMapped}");
+                _sawmill.Info($"Contained entities inserted: {containedSpawned}");
+                _sawmill.Info($"Contained entities failed (placed on floor): {containedFailed}");
+                
+                var successRate = totalEntities > 0 ? (float)(successfullyMapped) / totalEntities * 100 : 0;
+                _sawmill.Info($"Overall success rate: {successRate:F1}%");
+
+                if (containedFailed > 0)
+                {
+                    _sawmill.Warning($"{containedFailed} entities could not be properly contained and were placed on the floor");
+                }
+            }
+            catch (Exception ex)
+            {
+                _sawmill.Warning($"Failed to log reconstruction stats: {ex.Message}");
+            }
         }
     }
 }
