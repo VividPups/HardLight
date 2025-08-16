@@ -31,6 +31,15 @@ using Robust.Shared.Log; // ADDED: For Logger
 using Content.Shared.Shuttles.Save; // For RequestLoadShipMessage
 using Content.Shared.Access.Components; // For IdCardComponent
 using Robust.Shared.Map.Components; // For MapGridComponent
+using Content.Server._NF.StationEvents.Components; // For LinkedLifecycleGridParentComponent
+using Content.Server.Maps; // For GameMapPrototype
+using Content.Shared.Chat; // For InGameICChatType
+using Content.Shared.Radio; // For RadioChannelPrototype
+using Robust.Shared.Prototypes; // For Loc
+using Content.Server.Radio.EntitySystems; // For RadioSystem
+using Content.Server._NF.Shuttles.Systems; // For ShuttleRecordsSystem
+using Content.Shared.Shuttles.Components; // For IFFComponent
+using Content.Shared.Popups; // For PopupSystem
 
 namespace Content.Server._NF.Shipyard.Systems;
 
@@ -48,6 +57,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     [Dependency] private readonly IEntityManager _entityManager = default!;
     [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
     [Dependency] private readonly IServerNetManager _netManager = default!; // Ensure this is present
+    [Dependency] private readonly SharedPopupSystem _popup = default!;
 
     public MapId? ShipyardMap { get; private set; }
     private float _shuttleIndex;
@@ -151,7 +161,42 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 _shuttleIndex += gridComp.LocalAABB.Width + ShuttleSpawnBuffer;
             }
 
-            // Atmosphere should now be automatically restored during ship reconstruction
+            // Ensure the loaded ship has a ShuttleComponent (required for docking and IFF)
+            if (!HasComp<ShuttleComponent>(newShipGridUid))
+            {
+                var shuttleComp = EnsureComp<ShuttleComponent>(newShipGridUid);
+                _sawmill.Info($"Added ShuttleComponent to loaded ship {newShipGridUid}");
+            }
+
+            // Add IFFComponent to make it show up properly on radar as a friendly player ship
+            if (!HasComp<IFFComponent>(newShipGridUid))
+            {
+                var iffComp = EnsureComp<IFFComponent>(newShipGridUid);
+                _shuttle.AddIFFFlag(newShipGridUid, IFFFlags.IsPlayerShuttle);
+                _shuttle.SetIFFColor(newShipGridUid, IFFComponent.IFFColor);
+                _sawmill.Info($"Added IFFComponent to loaded ship {newShipGridUid}");
+            }
+
+            var shipName = shipGridData.Metadata.ShipName;
+
+            // Set up station for the loaded ship exactly like purchased ships
+            EntityUid? shuttleStation = null;
+            if (_prototypeManager.TryIndex<GameMapPrototype>(shipName, out var stationProto))
+            {
+                List<EntityUid> gridUids = new()
+                {
+                    newShipGridUid
+                };
+                shuttleStation = _station.InitializeNewStation(stationProto.Stations[shipName], gridUids);
+                _sawmill.Info($"Created station {shuttleStation} from prototype for loaded ship {shipName}");
+
+                var vesselInfo = EnsureComp<ExtraShuttleInformationComponent>(shuttleStation.Value);
+                vesselInfo.Vessel = shipName;
+            }
+            else
+            {
+                _sawmill.Info($"No station prototype found for {shipName}, ship will work without station setup");
+            }
 
             // Dock the loaded ship to the console's grid (similar to purchase behavior)
             if (TryComp<ShuttleComponent>(newShipGridUid, out var shuttleComponent))
@@ -182,11 +227,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 if (idCardEntity != null)
                 {
                     var deedComponent = EnsureComp<ShuttleDeedComponent>(idCardEntity.Value);
-                    deedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
-                    deedComponent.ShuttleName = shipGridData.Metadata.ShipName;
-                    deedComponent.ShuttleOwner = playerSession.Name;
-                    deedComponent.PurchasedWithVoucher = false;
-                    Dirty(idCardEntity.Value, deedComponent);
+                    AssignShuttleDeedProperties((idCardEntity.Value, deedComponent), newShipGridUid, shipName, playerSession.Name, false);
                     _sawmill.Info($"Added deed to player's ID card entity {idCardEntity.Value}");
                 }
                 else
@@ -195,19 +236,38 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
                 }
             }
 
-            // Also add deed to the ship itself
+            // Also add deed to the ship itself (like purchased ships)
             var shipDeedComponent = EnsureComp<ShuttleDeedComponent>(newShipGridUid);
-            shipDeedComponent.ShuttleUid = GetNetEntity(newShipGridUid);
-            shipDeedComponent.ShuttleName = shipGridData.Metadata.ShipName;
-            shipDeedComponent.ShuttleOwner = playerSession.Name;
-            shipDeedComponent.PurchasedWithVoucher = false;
-            Dirty(newShipGridUid, shipDeedComponent);
+            AssignShuttleDeedProperties((newShipGridUid, shipDeedComponent), newShipGridUid, shipName, playerSession.Name, false);
+
+            // Station information already set up above during station creation
+
+            // Send radio announcement like purchased ships do
+            if (TryComp<ShipyardConsoleComponent>(targetConsole.Value, out var consoleComponent))
+            {
+                SendLoadMessage(targetConsole.Value, playerEntity ?? EntityUid.Invalid, shipName, consoleComponent.ShipyardChannel);
+                if (consoleComponent.SecretShipyardChannel is { } secretChannel)
+                    SendLoadMessage(targetConsole.Value, playerEntity ?? EntityUid.Invalid, shipName, secretChannel, secret: true);
+                _sawmill.Info($"Sent radio announcements for loaded ship {shipName}");
+            }
 
             _sawmill.Info($"Successfully loaded and docked ship {shipGridData.Metadata.ShipName} for player {playerSession.Name}");
         }
         catch (InvalidOperationException e)
         {
             _sawmill.Error($"Ship loading failed for {playerSession.Name} due to data tampering: {e.Message}");
+            
+            // Check if this is a checksum mismatch error specifically
+            if (e.Message.Contains("Checksum mismatch"))
+            {
+                // Show in-character warning message for checksum failure
+                var playerEntity = playerSession.AttachedEntity;
+                if (playerEntity.HasValue)
+                {
+                    _popup.PopupEntity(Loc.GetString("shipyard-console-checksum-failure"), 
+                                     playerEntity.Value, playerEntity.Value, PopupType.LargeCaution);
+                }
+            }
         }
         catch (UnauthorizedAccessException e)
         {
@@ -527,5 +587,19 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     {
         string?[] parts = { comp.ShuttleName, comp.ShuttleNameSuffix };
         return string.Join(' ', parts.Where(it => it != null));
+    }
+
+    private void SendLoadMessage(EntityUid uid, EntityUid player, string name, string shipyardChannel, bool secret = false)
+    {
+        var channel = _prototypeManager.Index<RadioChannelPrototype>(shipyardChannel);
+
+        if (secret)
+        {
+            _radio.SendRadioMessage(uid, Loc.GetString("shipyard-console-docking-secret"), channel, uid);
+        }
+        else
+        {
+            _radio.SendRadioMessage(uid, Loc.GetString("shipyard-console-docking", ("owner", player), ("vessel", name)), channel, uid);
+        }
     }
 }

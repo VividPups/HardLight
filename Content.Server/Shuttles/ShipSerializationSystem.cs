@@ -22,8 +22,15 @@ using Robust.Shared.Log;
 using Robust.Server.GameObjects;
 using Content.Server.Atmos.Components;
 using Content.Server.Atmos;
+using Content.Server.Atmos.EntitySystems;
 using Robust.Shared.Containers;
 using Robust.Server.Physics;
+using Content.Shared.Atmos;
+using Robust.Shared.Timing;
+using Robust.Shared.Console;
+using Content.Shared.Decals;
+using Content.Server.Decals;
+using static Content.Shared.Decals.DecalGridComponent;
 
 namespace Content.Server.Shuttles.Save
 {
@@ -34,7 +41,9 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly ISerializationManager _serializationManager = default!;
         [Dependency] private readonly ITileDefinitionManager _tileDefManager = default!;
         [Dependency] private readonly MapSystem _map = default!;
-        [Dependency] private readonly GridFixtureSystem _gridFixture = default!;
+        [Dependency] private readonly AtmosphereSystem _atmosphere = default!;
+        [Dependency] private readonly IConsoleHost _consoleHost = default!;
+        [Dependency] private readonly DecalSystem _decalSystem = default!;
         
         private ISawmill _sawmill = default!;
 
@@ -93,24 +102,28 @@ namespace Content.Server.Shuttles.Save
 
             _sawmill.Info($"Serialized {gridData.Tiles.Count} tiles");
 
-            // Serialize atmosphere data
-            if (_entityManager.TryGetComponent<GridAtmosphereComponent>(gridId, out var atmosphereComponent))
+            // Skip atmosphere serialization as TileAtmosphere is not serializable
+            // Atmosphere will be restored using fixgridatmos command during loading
+            _sawmill.Info("Skipping atmosphere serialization - will use fixgridatmos during load");
+
+            // Serialize decal data
+            if (_entityManager.TryGetComponent<DecalGridComponent>(gridId, out var decalComponent))
             {
                 try
                 {
-                    var atmosphereNode = _serializationManager.WriteValue(atmosphereComponent.Tiles);
-                    var atmosphereYaml = _serializer.Serialize(atmosphereNode);
-                    gridData.AtmosphereData = atmosphereYaml;
-                    _sawmill.Info($"Serialized atmosphere data for {atmosphereComponent.Tiles.Count} atmosphere tiles");
+                    var decalNode = _serializationManager.WriteValue(decalComponent.ChunkCollection, notNullableOverride: true);
+                    var decalYaml = _serializer.Serialize(decalNode);
+                    gridData.DecalData = decalYaml;
+                    _sawmill.Info($"Serialized decal data for grid");
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to serialize atmosphere data: {ex.Message}");
+                    _sawmill.Error($"Failed to serialize decal data: {ex.Message}");
                 }
             }
             else
             {
-                _sawmill.Warning("No atmosphere component found on grid, atmosphere will not be preserved");
+                _sawmill.Info("No decal component found on grid, decals will not be preserved");
             }
 
             // Simplified entity serialization
@@ -198,16 +211,15 @@ namespace Content.Server.Shuttles.Save
             var newGrid = _mapManager.CreateGrid(targetMap);
             _sawmill.Info($"Created new grid {newGrid.Owner} on shipyard map {targetMap}");
             
-            // Temporarily disable grid splitting to prevent ship from being cut up during reconstruction
-            var originalSplitAllowed = _gridFixture.SplitAllowed;
-            _gridFixture.SplitAllowed = false;
-            _sawmill.Debug("Disabled grid splitting for ship reconstruction");
+            // Note: Grid splitting prevention would require internal access
+            // TODO: Investigate alternative approaches to prevent grid splitting
 
             // Move grid to the specified offset position
             var gridXform = Transform(newGrid.Owner);
             gridXform.WorldPosition = offset;
 
-            // Reconstruct tiles first
+            // Reconstruct tiles in connectivity order to prevent grid splitting
+            var tilesToPlace = new List<(Vector2i coords, Tile tile)>();
             foreach (var tileData in primaryGridData.Tiles)
             {
                 if (string.IsNullOrEmpty(tileData.TileType) || tileData.TileType == "Space")
@@ -218,47 +230,89 @@ namespace Content.Server.Shuttles.Save
                     var tileDef = _tileDefManager[tileData.TileType];
                     var tile = new Tile(tileDef.TileId);
                     var tileCoords = new Vector2i(tileData.X, tileData.Y);
-                    _map.SetTile(newGrid.Owner, newGrid, tileCoords, tile);
-                    _sawmill.Debug($"Placed tile {tileData.TileType} at {tileCoords}");
+                    tilesToPlace.Add((tileCoords, tile));
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to place tile {tileData.TileType} at ({tileData.X}, {tileData.Y}): {ex.Message}");
+                    _sawmill.Error($"Failed to prepare tile {tileData.TileType} at ({tileData.X}, {tileData.Y}): {ex.Message}");
                 }
             }
 
-            // Restore atmosphere data if available
-            if (!string.IsNullOrEmpty(primaryGridData.AtmosphereData))
+            // Sort tiles by connectivity to maintain grid integrity during placement
+            // Start from the center and work outward to ensure the grid stays connected
+            if (tilesToPlace.Any())
+            {
+                var center = new Vector2(
+                    (float)tilesToPlace.Average(t => t.coords.X),
+                    (float)tilesToPlace.Average(t => t.coords.Y)
+                );
+
+                tilesToPlace.Sort((a, b) => 
+                    (new Vector2(a.coords.X, a.coords.Y) - center).LengthSquared().CompareTo(
+                    (new Vector2(b.coords.X, b.coords.Y) - center).LengthSquared()));
+            }
+
+            // Place tiles maintaining connectivity
+            foreach (var (coords, tile) in tilesToPlace)
+            {
+                _map.SetTile(newGrid.Owner, newGrid, coords, tile);
+            }
+            _sawmill.Info($"Placed {tilesToPlace.Count} tiles in connectivity order");
+
+            // Apply fixgridatmos-style atmosphere to all loaded ships
+            _sawmill.Info("Applying fixgridatmos-style atmosphere to loaded ship");
+            ApplyFixGridAtmosphereToGrid(newGrid.Owner);
+
+            // Restore decal data using proper DecalSystem API
+            if (!string.IsNullOrEmpty(primaryGridData.DecalData))
             {
                 try
                 {
-                    var atmosphereNode = _deserializer.Deserialize<object>(primaryGridData.AtmosphereData);
-                    var atmosTiles = _serializationManager.Read<Dictionary<Vector2i, TileAtmosphere>>(atmosphereNode);
+                    var decalChunkCollection = _deserializer.Deserialize<DecalGridChunkCollection>(primaryGridData.DecalData);
+                    var decalsRestored = 0;
+                    var decalsFailed = 0;
                     
-                    // Get or create the GridAtmosphereComponent
-                    var atmosComponent = _entityManager.EnsureComponent<GridAtmosphereComponent>(newGrid.Owner);
+                    // Ensure the grid has a DecalGridComponent
+                    _entityManager.EnsureComponent<DecalGridComponent>(newGrid.Owner);
                     
-                    // Restore atmosphere tiles - update grid references
-                    atmosComponent.Tiles.Clear();
-                    foreach (var (coord, tile) in atmosTiles)
+                    foreach (var (chunkPos, chunk) in decalChunkCollection.ChunkCollection)
                     {
-                        tile.GridIndex = newGrid.Owner;
-                        tile.GridIndices = coord;
-                        atmosComponent.Tiles[coord] = tile;
+                        foreach (var (decalId, decal) in chunk.Decals)
+                        {
+                            // Convert the decal coordinates to EntityCoordinates on the new grid
+                            var decalCoords = new EntityCoordinates(newGrid.Owner, decal.Coordinates);
+                            
+                            // Use the DecalSystem to properly add the decal
+                            if (_decalSystem.TryAddDecal(decal.Id, decalCoords, out _, decal.Color, decal.Angle, decal.ZIndex, decal.Cleanable))
+                            {
+                                decalsRestored++;
+                            }
+                            else
+                            {
+                                decalsFailed++;
+                                _sawmill.Warning($"Failed to restore decal {decal.Id} at {decal.Coordinates}");
+                            }
+                        }
                     }
                     
-                    _sawmill.Info($"Restored atmosphere data for {atmosTiles.Count} tiles");
+                    _sawmill.Info($"Restored {decalsRestored} decals from {decalChunkCollection.ChunkCollection.Count} chunks");
+                    if (decalsFailed > 0)
+                    {
+                        _sawmill.Warning($"Failed to restore {decalsFailed} decals");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to restore atmosphere data: {ex.Message}");
+                    _sawmill.Error($"Failed to restore decal data: {ex.Message}");
                 }
             }
             else
             {
-                _sawmill.Warning("No atmosphere data found in ship save, ship will have no air");
+                _sawmill.Info("No decal data found, decals will not be restored");
             }
 
+            // Reconstruct entities
+            var entitiesToSpawn = new List<(string prototype, EntityCoordinates coords, float rotation)>();
             foreach (var entityData in primaryGridData.Entities)
             {
                 // Skip entities with empty or null prototypes
@@ -268,31 +322,32 @@ namespace Content.Server.Shuttles.Save
                     continue;
                 }
 
-                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position} with rotation {entityData.Rotation}");
+                var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                entitiesToSpawn.Add((entityData.Prototype, coordinates, entityData.Rotation));
+            }
+
+            // Spawn all entities
+            foreach (var (prototype, coords, rotation) in entitiesToSpawn)
+            {
                 try
                 {
-                    var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
-                    var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    var newEntity = _entityManager.SpawnEntity(prototype, coords);
                     
                     // Apply rotation if it exists
-                    if (Math.Abs(entityData.Rotation) > 0.001f)
+                    if (Math.Abs(rotation) > 0.001f)
                     {
                         var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
-                        transform.LocalRotation = new Angle(entityData.Rotation);
+                        transform.LocalRotation = new Angle(rotation);
                     }
                     
-                    _sawmill.Debug($"Spawned entity {newEntity}");
+                    _sawmill.Debug($"Spawned entity {newEntity} ({prototype})");
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
+                    _sawmill.Error($"Failed to spawn entity {prototype}: {ex.Message}");
                     throw;
                 }
             }
-
-            // Restore original grid splitting setting
-            _gridFixture.SplitAllowed = originalSplitAllowed;
-            _sawmill.Debug("Restored grid splitting setting");
 
             return newGrid.Owner;
         }
@@ -308,10 +363,8 @@ namespace Content.Server.Shuttles.Save
             var primaryGridData = shipGridData.Grids[0];
             _sawmill.Info($"Primary grid has {primaryGridData.Entities.Count} entities");
             
-            // Temporarily disable grid splitting to prevent ship from being cut up during reconstruction
-            var originalSplitAllowed = _gridFixture.SplitAllowed;
-            _gridFixture.SplitAllowed = false;
-            _sawmill.Debug("Disabled grid splitting for ship reconstruction");
+            // Note: Grid splitting prevention would require internal access
+            // TODO: Investigate alternative approaches to prevent grid splitting
             
             // Create a new map for the ship instead of using MapId.Nullspace
             _map.CreateMap(out var mapId);
@@ -320,7 +373,8 @@ namespace Content.Server.Shuttles.Save
             var newGrid = _mapManager.CreateGrid(mapId);
             _sawmill.Info($"Created new grid {newGrid.Owner} on map {mapId}");
 
-            // Reconstruct tiles first
+            // Reconstruct tiles in connectivity order to prevent grid splitting
+            var tilesToPlace = new List<(Vector2i coords, Tile tile)>();
             foreach (var tileData in primaryGridData.Tiles)
             {
                 if (string.IsNullOrEmpty(tileData.TileType) || tileData.TileType == "Space")
@@ -331,47 +385,89 @@ namespace Content.Server.Shuttles.Save
                     var tileDef = _tileDefManager[tileData.TileType];
                     var tile = new Tile(tileDef.TileId);
                     var tileCoords = new Vector2i(tileData.X, tileData.Y);
-                    _map.SetTile(newGrid.Owner, newGrid, tileCoords, tile);
-                    _sawmill.Debug($"Placed tile {tileData.TileType} at {tileCoords}");
+                    tilesToPlace.Add((tileCoords, tile));
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to place tile {tileData.TileType} at ({tileData.X}, {tileData.Y}): {ex.Message}");
+                    _sawmill.Error($"Failed to prepare tile {tileData.TileType} at ({tileData.X}, {tileData.Y}): {ex.Message}");
                 }
             }
 
-            // Restore atmosphere data if available
-            if (!string.IsNullOrEmpty(primaryGridData.AtmosphereData))
+            // Sort tiles by connectivity to maintain grid integrity during placement
+            // Start from the center and work outward to ensure the grid stays connected
+            if (tilesToPlace.Any())
+            {
+                var center = new Vector2(
+                    (float)tilesToPlace.Average(t => t.coords.X),
+                    (float)tilesToPlace.Average(t => t.coords.Y)
+                );
+
+                tilesToPlace.Sort((a, b) => 
+                    (new Vector2(a.coords.X, a.coords.Y) - center).LengthSquared().CompareTo(
+                    (new Vector2(b.coords.X, b.coords.Y) - center).LengthSquared()));
+            }
+
+            // Place tiles maintaining connectivity
+            foreach (var (coords, tile) in tilesToPlace)
+            {
+                _map.SetTile(newGrid.Owner, newGrid, coords, tile);
+            }
+            _sawmill.Info($"Placed {tilesToPlace.Count} tiles in connectivity order");
+
+            // Apply fixgridatmos-style atmosphere to all loaded ships
+            _sawmill.Info("Applying fixgridatmos-style atmosphere to loaded ship");
+            ApplyFixGridAtmosphereToGrid(newGrid.Owner);
+
+            // Restore decal data using proper DecalSystem API
+            if (!string.IsNullOrEmpty(primaryGridData.DecalData))
             {
                 try
                 {
-                    var atmosphereNode = _deserializer.Deserialize<object>(primaryGridData.AtmosphereData);
-                    var atmosTiles = _serializationManager.Read<Dictionary<Vector2i, TileAtmosphere>>(atmosphereNode);
+                    var decalChunkCollection = _deserializer.Deserialize<DecalGridChunkCollection>(primaryGridData.DecalData);
+                    var decalsRestored = 0;
+                    var decalsFailed = 0;
                     
-                    // Get or create the GridAtmosphereComponent
-                    var atmosComponent = _entityManager.EnsureComponent<GridAtmosphereComponent>(newGrid.Owner);
+                    // Ensure the grid has a DecalGridComponent
+                    _entityManager.EnsureComponent<DecalGridComponent>(newGrid.Owner);
                     
-                    // Restore atmosphere tiles - update grid references
-                    atmosComponent.Tiles.Clear();
-                    foreach (var (coord, tile) in atmosTiles)
+                    foreach (var (chunkPos, chunk) in decalChunkCollection.ChunkCollection)
                     {
-                        tile.GridIndex = newGrid.Owner;
-                        tile.GridIndices = coord;
-                        atmosComponent.Tiles[coord] = tile;
+                        foreach (var (decalId, decal) in chunk.Decals)
+                        {
+                            // Convert the decal coordinates to EntityCoordinates on the new grid
+                            var decalCoords = new EntityCoordinates(newGrid.Owner, decal.Coordinates);
+                            
+                            // Use the DecalSystem to properly add the decal
+                            if (_decalSystem.TryAddDecal(decal.Id, decalCoords, out _, decal.Color, decal.Angle, decal.ZIndex, decal.Cleanable))
+                            {
+                                decalsRestored++;
+                            }
+                            else
+                            {
+                                decalsFailed++;
+                                _sawmill.Warning($"Failed to restore decal {decal.Id} at {decal.Coordinates}");
+                            }
+                        }
                     }
                     
-                    _sawmill.Info($"Restored atmosphere data for {atmosTiles.Count} tiles");
+                    _sawmill.Info($"Restored {decalsRestored} decals from {decalChunkCollection.ChunkCollection.Count} chunks");
+                    if (decalsFailed > 0)
+                    {
+                        _sawmill.Warning($"Failed to restore {decalsFailed} decals");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to restore atmosphere data: {ex.Message}");
+                    _sawmill.Error($"Failed to restore decal data: {ex.Message}");
                 }
             }
             else
             {
-                _sawmill.Warning("No atmosphere data found in ship save, ship will have no air");
+                _sawmill.Info("No decal data found, decals will not be restored");
             }
 
+            // Reconstruct entities - batch spawn to reduce operations
+            var entitiesToSpawn = new List<(string prototype, EntityCoordinates coords, float rotation)>();
             foreach (var entityData in primaryGridData.Entities)
             {
                 // Skip entities with empty or null prototypes
@@ -381,31 +477,32 @@ namespace Content.Server.Shuttles.Save
                     continue;
                 }
 
-                _sawmill.Debug($"Reconstructing entity: {entityData.Prototype} at {entityData.Position} with rotation {entityData.Rotation}");
+                var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
+                entitiesToSpawn.Add((entityData.Prototype, coordinates, entityData.Rotation));
+            }
+
+            // Spawn all entities
+            foreach (var (prototype, coords, rotation) in entitiesToSpawn)
+            {
                 try
                 {
-                    var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
-                    var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
+                    var newEntity = _entityManager.SpawnEntity(prototype, coords);
                     
                     // Apply rotation if it exists
-                    if (Math.Abs(entityData.Rotation) > 0.001f)
+                    if (Math.Abs(rotation) > 0.001f)
                     {
                         var transform = _entityManager.GetComponent<TransformComponent>(newEntity);
-                        transform.LocalRotation = new Angle(entityData.Rotation);
+                        transform.LocalRotation = new Angle(rotation);
                     }
                     
-                    _sawmill.Debug($"Spawned entity {newEntity}");
+                    _sawmill.Debug($"Spawned entity {newEntity} ({prototype})");
                 }
                 catch (Exception ex)
                 {
-                    _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
+                    _sawmill.Error($"Failed to spawn entity {prototype}: {ex.Message}");
                     throw;
                 }
             }
-
-            // Restore original grid splitting setting
-            _gridFixture.SplitAllowed = originalSplitAllowed;
-            _sawmill.Debug("Restored grid splitting setting");
 
             return newGrid.Owner;
         }
@@ -434,9 +531,48 @@ namespace Content.Server.Shuttles.Save
             return false;
         }
 
+        private void ApplyFixGridAtmosphereToGrid(EntityUid gridUid)
+        {
+            // Execute fixgridatmos console command after a short delay to allow atmosphere system to initialize
+            Timer.Spawn(TimeSpan.FromMilliseconds(100), () =>
+            {
+                if (!_entityManager.EntityExists(gridUid))
+                {
+                    _sawmill.Error($"Grid {gridUid} no longer exists for atmosphere application");
+                    return;
+                }
+
+                var netEntity = _entityManager.GetNetEntity(gridUid);
+                var commandArgs = $"fixgridatmos {netEntity}";
+                _sawmill.Info($"Running fixgridatmos command: {commandArgs}");
+                
+                try
+                {
+                    _consoleHost.ExecuteCommand(null, commandArgs);
+                    _sawmill.Info($"Successfully executed fixgridatmos for grid {gridUid}");
+                }
+                catch (Exception ex)
+                {
+                    _sawmill.Error($"Failed to execute fixgridatmos command: {ex.Message}");
+                }
+            });
+        }
+
         private string GenerateChecksum(List<GridData> grids)
         {
-            var yamlString = _serializer.Serialize(grids);
+            var checksumData = new List<object>();
+            
+            foreach (var grid in grids)
+            {
+                checksumData.Add(new
+                {
+                    Tiles = grid.Tiles.Select(t => new { t.X, t.Y, t.TileType }).OrderBy(t => t.X).ThenBy(t => t.Y),
+                    Entities = grid.Entities.Select(e => new { e.Prototype, e.Position, e.Rotation }).OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y),
+                    DecalData = grid.DecalData
+                });
+            }
+            
+            var yamlString = _serializer.Serialize(checksumData);
             using (var sha256 = SHA256.Create())
             {
                 var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(yamlString));

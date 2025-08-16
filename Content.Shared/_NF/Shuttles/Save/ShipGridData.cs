@@ -60,6 +60,9 @@ namespace Content.Shared.Shuttles.Save
 
         [DataField("atmosphere")]
         public string? AtmosphereData { get; set; } = null;
+
+        [DataField("decals")]
+        public string? DecalData { get; set; } = null;
     }
 
     [Serializable]
