@@ -558,22 +558,20 @@ namespace Content.Server.Shuttles.Save
                             }
                             else
                             {
-                                // If insertion fails, move to a nearby position on the grid
-                                var fallbackPos = FindNearbyPosition(newGrid.Owner, entityData.Position);
-                                var transform = _entityManager.GetComponent<TransformComponent>(containedEntity.Value);
-                                transform.Coordinates = new EntityCoordinates(newGrid.Owner, fallbackPos);
+                                // If insertion fails, delete the entity instead of placing at 0,0
+                                _entityManager.DeleteEntity(containedEntity.Value);
+                                entityIdMapping.Remove(entityData.EntityId);
                                 containedFailed++;
-                                _sawmill.Warning($"Phase 2: Failed to insert {entityData.Prototype} into container, placed on floor at {fallbackPos}");
+                                _sawmill.Warning($"Phase 2: Failed to insert {entityData.Prototype} into container, entity deleted");
                             }
                         }
                         else
                         {
-                            // Parent container not found, place on floor
-                            var fallbackPos = FindNearbyPosition(newGrid.Owner, entityData.Position);
-                            var transform = _entityManager.GetComponent<TransformComponent>(containedEntity.Value);
-                            transform.Coordinates = new EntityCoordinates(newGrid.Owner, fallbackPos);
+                            // Parent container not found, delete the entity instead of placing at 0,0
+                            _entityManager.DeleteEntity(containedEntity.Value);
+                            entityIdMapping.Remove(entityData.EntityId);
                             containedFailed++;
-                            _sawmill.Warning($"Phase 2: Parent container not found for {entityData.Prototype}, placed on floor at {fallbackPos}");
+                            _sawmill.Warning($"Phase 2: Parent container not found for {entityData.Prototype}, entity deleted");
                         }
                     }
                 }
@@ -878,9 +876,10 @@ namespace Content.Server.Shuttles.Save
                 // Position checksum for tamper detection (including container relationships)
                 var tileCoordSum = sortedTiles.Sum(t => t.X * 100 + t.Y);
                 var entityPosSum = (int)sortedEntities.Sum(e => e.Position.X * 100 + e.Position.Y * 100);
+                // Use deterministic string hash instead of GetHashCode for container relationships
                 var containerRelationSum = sortedEntities
                     .Where(e => e.IsContained && !string.IsNullOrEmpty(e.ParentContainerEntity))
-                    .Sum(e => e.ParentContainerEntity!.GetHashCode() % 10000);
+                    .Sum(e => ComputeStringHash(e.ParentContainerEntity!) % 10000);
                 checksumBuilder.Append($":P{tileCoordSum + entityPosSum + containerRelationSum}");
                 
                 checksumBuilder.Append(";");
@@ -951,6 +950,18 @@ namespace Content.Server.Shuttles.Save
             using var sha256 = SHA256.Create();
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+        
+        private static int ComputeStringHash(string input)
+        {
+            // Deterministic string hash using simple FNV-1a algorithm
+            uint hash = 2166136261u;
+            foreach (byte b in Encoding.UTF8.GetBytes(input))
+            {
+                hash ^= b;
+                hash *= 16777619u;
+            }
+            return (int)(hash & 0x7FFFFFFF); // Ensure positive
         }
 
         public string GetConvertedLegacyShipYaml(ShipGridData shipData, string playerName, string originalYamlString)
@@ -1043,10 +1054,10 @@ namespace Content.Server.Shuttles.Save
                     return SerializeSolutionComponent(solutionManager);
                 }
 
-                // Special handling for paper components to preserve content and stamps
-                if (component is Content.Shared.Paper.PaperComponent paperComponent)
+                // Skip paper components - causes loading lag
+                if (component is Content.Shared.Paper.PaperComponent)
                 {
-                    return SerializePaperComponent(paperComponent);
+                    return null;
                 }
 
                 // Use RobustToolbox's serialization system to serialize the component
@@ -1166,39 +1177,6 @@ namespace Content.Server.Shuttles.Save
             }
         }
 
-        private ComponentData? SerializePaperComponent(Content.Shared.Paper.PaperComponent paperComponent)
-        {
-            try
-            {
-                var paperData = new Dictionary<string, object>
-                {
-                    ["Content"] = paperComponent.Content ?? "",
-                    ["StampedBy"] = paperComponent.StampedBy?.Select(stamp => new Dictionary<string, object>
-                    {
-                        ["StampedName"] = stamp.StampedName ?? "",
-                        ["StampedColor"] = stamp.StampedColor.ToHex()
-                    }).Cast<object>().ToList() ?? new List<object>(),
-                    ["StampState"] = paperComponent.StampState ?? "",
-                    ["EditingDisabled"] = paperComponent.EditingDisabled
-                };
-
-                var componentData = new ComponentData
-                {
-                    Type = "PaperComponent",
-                    Properties = paperData,
-                    NetId = 0
-                };
-
-                if ((paperComponent.Content?.Length ?? 0) > 0)
-                    _sawmill.Info($"Serialized paper with {paperComponent.Content?.Length ?? 0} characters, {paperComponent.StampedBy?.Count ?? 0} stamps");
-                return componentData;
-            }
-            catch (Exception ex)
-            {
-                _sawmill.Warning($"Failed to serialize paper component: {ex.Message}");
-                return null;
-            }
-        }
 
         private bool ShouldSkipComponent(Type componentType)
         {
@@ -1235,8 +1213,8 @@ namespace Content.Server.Shuttles.Save
             if (typeName.Contains("Solution") || typeName.Contains("Chemical"))
                 return true;
                 
-            // Paper and text components
-            if (typeName.Contains("Paper") || typeName.Contains("Book") || typeName.Contains("SignComponent"))
+            // Book and text components (paper no longer preserved)
+            if (typeName.Contains("Book") || typeName.Contains("SignComponent"))
                 return true;
                 
             // Storage and container components
@@ -1351,17 +1329,9 @@ namespace Content.Server.Shuttles.Save
                     return;
                 }
 
-                // Special handling for paper components
+                // Skip paper components - no longer preserved to reduce loading lag
                 if (componentData.Type == "PaperComponent")
                 {
-                    if (componentData.Properties.Any())
-                    {
-                        RestorePaperComponent(entityUid, componentData);
-                    }
-                    else
-                    {
-                        // Paper component has no data - skipping
-                    }
                     return;
                 }
 
@@ -1508,66 +1478,6 @@ namespace Content.Server.Shuttles.Save
             }
         }
 
-        private void RestorePaperComponent(EntityUid entityUid, ComponentData componentData)
-        {
-            try
-            {
-                if (!_entityManager.TryGetComponent<Content.Shared.Paper.PaperComponent>(entityUid, out var paperComponent))
-                {
-                    _sawmill.Warning($"Entity {entityUid} does not have PaperComponent to restore");
-                    return;
-                }
-
-                // Restore paper content
-                if (componentData.Properties.TryGetValue("Content", out var contentObj) && contentObj is string content)
-                {
-                    paperComponent.Content = content;
-                }
-
-                // Restore stamps
-                if (componentData.Properties.TryGetValue("StampedBy", out var stampsObj) && 
-                    stampsObj is List<object> stampsList)
-                {
-                    paperComponent.StampedBy.Clear();
-                    foreach (var stampObj in stampsList)
-                    {
-                        if (stampObj is Dictionary<string, object> stampDict)
-                        {
-                            var stampName = stampDict.GetValueOrDefault("StampedName", "")?.ToString() ?? "";
-                            var stampColorHex = stampDict.GetValueOrDefault("StampedColor", "#000000")?.ToString() ?? "#000000";
-                            
-                            if (Robust.Shared.Maths.Color.TryFromHex(stampColorHex) is Robust.Shared.Maths.Color stampColor)
-                            {
-                                paperComponent.StampedBy.Add(new Content.Shared.Paper.StampDisplayInfo
-                                {
-                                    StampedName = stampName,
-                                    StampedColor = stampColor
-                                });
-                            }
-                        }
-                    }
-                }
-
-                // Restore stamp state
-                if (componentData.Properties.TryGetValue("StampState", out var stampStateObj) && stampStateObj is string stampState)
-                {
-                    paperComponent.StampState = stampState;
-                }
-
-                // Restore editing disabled state
-                if (componentData.Properties.TryGetValue("EditingDisabled", out var editingDisabledObj) && editingDisabledObj is bool editingDisabled)
-                {
-                    paperComponent.EditingDisabled = editingDisabled;
-                }
-
-                if ((paperComponent.Content?.Length ?? 0) > 0)
-                    _sawmill.Info($"Restored paper with {paperComponent.Content?.Length ?? 0} characters, {paperComponent.StampedBy?.Count ?? 0} stamps");
-            }
-            catch (Exception ex)
-            {
-                _sawmill.Error($"Failed to restore paper component on entity {entityUid}: {ex.Message}");
-            }
-        }
 
         private (string? parentContainerEntity, string? containerSlot) GetContainerInfo(EntityUid entityUid)
         {

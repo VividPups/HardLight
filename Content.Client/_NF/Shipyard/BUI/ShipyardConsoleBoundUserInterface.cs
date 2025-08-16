@@ -188,8 +188,11 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
         Populate(castState.ShipyardPrototypes.available, castState.ShipyardPrototypes.unavailable, castState.FreeListings, castState.IsTargetIdPresent);
         _menu?.UpdateState(castState);
         
-        // Refresh saved ships list whenever UI updates
-        RefreshSavedShipList();
+        // Only refresh saved ships list if the UI is actually open
+        if (IsOpened)
+        {
+            RefreshSavedShipList();
+        }
     }
 
     private void ApproveOrder(ButtonEventArgs args)
