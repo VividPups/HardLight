@@ -267,6 +267,120 @@
 
 - type: entity
   name: Doctor Dinosaur
+  id: MobDrdino2
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino2
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino2
+        Dead:
+          Base: DrDino_dead
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino3
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino3
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino3
+        Dead:
+          Base: DrDino_dead
+
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino4
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino4
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino4
+        Dead:
+          Base: DrDino_dead
+
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino5
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino5
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino5
+        Dead:
+          Base: DrDino_dead
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino6
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino6
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino6
+        Dead:
+          Base: DrDino_dead 
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino7
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino7
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino7
+        Dead:
+          Base: DrDino_dead          
+          
+- type: entity
+  name: Doctor Dinosaur
   id: MobDrdino8
   parent: MobDrdino
   description: What has science Wrought?!
@@ -283,3 +397,4 @@
           Base: DrDino8
         Dead:
           Base: DrDino_dead
+
