@@ -108,12 +108,11 @@ public sealed partial class SalvageSystem
         if (component.Stage != ExpeditionStage.Added)
             return;
 
-        // Frontier: early finish - find expedition data on the correct grid
-        var expeditionData = FindExpeditionDataForStation(component.Station);
-        if (expeditionData != null)
+        // Frontier: early finish
+        if (TryComp<SalvageExpeditionDataComponent>(component.Station, out var data))
         {
-            expeditionData.Value.Comp.CanFinish = true;
-            UpdateConsoles(expeditionData.Value);
+            data.CanFinish = true;
+            UpdateConsoles((component.Station, data));
         }
         // End Frontier: early finish
 
@@ -165,13 +164,12 @@ public sealed partial class SalvageSystem
     private void OnFTLStarted(ref FTLStartedEvent ev)
     {
         if (!TryComp<SalvageExpeditionComponent>(ev.FromMapUid, out var expedition) ||
-            FindExpeditionDataForStation(expedition.Station) is not var expeditionData ||
-            expeditionData == null)
+            !TryComp<SalvageExpeditionDataComponent>(expedition.Station, out var station))
         {
             return;
         }
 
-        expeditionData.Value.Comp.CanFinish = false; // Frontier
+        station.CanFinish = false; // Frontier
 
         // Check if any shuttles remain.
         var query = EntityQueryEnumerator<ShuttleComponent, TransformComponent>();

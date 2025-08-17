@@ -132,11 +132,10 @@ public sealed partial class SalvageSystem
         if (Deleted(component.Station))
             return;
 
-        // Find expedition data - it's now stored on the grid/console, not the station
-        var expeditionData = FindExpeditionDataForStation(component.Station);
-        if (expeditionData != null)
+        // Finish mission
+        if (TryComp<SalvageExpeditionDataComponent>(component.Station, out var data))
         {
-            FinishExpedition(expeditionData.Value, component, uid); // Frontier: add component
+            FinishExpedition((component.Station, data), component, uid); // Frontier: add component
         }
     }
 
