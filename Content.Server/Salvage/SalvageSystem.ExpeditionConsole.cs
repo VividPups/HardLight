@@ -34,7 +34,7 @@ public sealed partial class SalvageSystem
     {
 
         // Check expedition data on console (where it actually is)
-        if (!TryComp<SalvageExpeditionDataComponent>(uid, out var data) || data.Claimed)
+        if (!TryComp<SalvageExpeditionDataComponent>(uid, out var data))
             return;
 
         // Get grid for FTL validation (where MapGridComponent is)
