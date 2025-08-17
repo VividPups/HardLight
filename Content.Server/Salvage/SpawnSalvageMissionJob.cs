@@ -139,10 +139,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
     private async Task<bool> InternalProcess() // Frontier: make process an internal function (for a try block indenting an entire), add "out EntityUid mapUid" param
     {
         _sawmill.Debug("salvage", $"Spawning salvage mission with seed {_missionParams.Seed}");
-        
-        try
-        {
-            mapUid = _map.CreateMap(out var mapId, runMapInit: false); // Frontier: remove var
+        mapUid = _map.CreateMap(out var mapId, runMapInit: false); // Frontier: remove var
         MetaDataComponent? metadata = null;
         var grid = _entManager.EnsureComponent<MapGridComponent>(mapUid);
         var random = new Random(_missionParams.Seed);
@@ -467,13 +464,6 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         // End Frontier
 
         return true;
-        }
-        catch (Exception e)
-        {
-            _sawmill.Error($"Exception during mission generation: {e.Message}");
-            _sawmill.Error($"Stack trace: {e.StackTrace}");
-            return false;
-        }
     }
 
     private async Task SpawnRandomEntry(Entity<MapGridComponent> grid, IBudgetEntry entry, Dungeon dungeon, Random random)
