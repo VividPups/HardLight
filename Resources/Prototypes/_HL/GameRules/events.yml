@@ -1426,7 +1426,9 @@
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
-    startAnnouncement: true
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
     earliestStart: 30
     reoccurrenceDelay: 200
     minimumPlayers: 30
@@ -1435,29 +1437,29 @@
   - type: VentCrittersRule
     entries:
     - id: MobArgocyteSlurva
-      prob: 0.005
+      prob: 0.05
     - id: MobArgocyteBarrier
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteSkitter
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteSwiper
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteMolder
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocytePouncer
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteGlider
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteHarvester
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteCrawler
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteEnforcer
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteFounder
-      prob: 0.0001
+      prob: 0.001
     - id: MobArgocyteLeviathing
-      prob: 0.00001
+      prob: 0.0001
 
 - type: entity
   id: TickVents
@@ -1465,7 +1467,9 @@
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
-    startAnnouncement: true
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
     earliestStart: 30
     reoccurrenceDelay: 200
     minimumPlayers: 20
@@ -1482,7 +1486,9 @@
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
-    startAnnouncement: true
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
     earliestStart: 30
     reoccurrenceDelay: 200
     minimumPlayers: 30
@@ -1493,15 +1499,15 @@
     - id: MobCarp
       prob: 0.008
     - id: MobCarpMagic
-      prob: 0.001
+      prob: 0.01
     - id: MobCarpHolo
-      prob: 0.003
+      prob: 0.03
     - id: MobCarpRainbow
-      prob: 0.001
+      prob: 0.01
     - id: MobShark
-      prob: 0.003
+      prob: 0.03
     - id: MobCarpDragon
-      prob: 0.001
+      prob: 0.01
 
 - type: entity
   id: SpaceVents
@@ -1509,7 +1515,9 @@
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
-    startAnnouncement: true
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
     earliestStart: 30
     reoccurrenceDelay: 200
     minimumPlayers: 30
@@ -1518,13 +1526,13 @@
   - type: VentCrittersRule
     entries:
     - id: MobBearSpace
-      prob: 0.003
+      prob: 0.03
     - id: MobKangarooSpace
-      prob: 0.005
+      prob: 0.05
     - id: MobSpiderSpace
-      prob: 0.001
+      prob: 0.01
     - id: MobCobraSpace
-      prob: 0.002
+      prob: 0.02
       
 - type: entity
   id: reagentslimeVents
@@ -1532,63 +1540,129 @@
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
-    startAnnouncement: true
+     startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg 
     earliestStart: 60
     reoccurrenceDelay: 200
-    minimumPlayers: 80
+    minimumPlayers: 40
     weight: 6 # Really weak compared to other critters
     duration: 60
   - type: VentCrittersRule
     entries:
     - id: ReagentSlimeBeer
-      prob: 0.0003
+      prob: 0.003
     - id: ReagentSlimePax
-      prob: 0.0001
+      prob: 0.001
     - id: ReagentSlimeNocturine
-      prob: 0.0001
+      prob: 0.001
     - id: ReagentSlimeTHC
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeBicaridine
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeToxin
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeNapalm
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeOmnizine
-      prob: 0.0003
+      prob: 0.003
     - id: ReagentSlimeMuteToxin
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeNorepinephricAcid
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeEphedrine
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeRobustHarvest
-      prob: 0.0003
+      prob: 0.003
     - id: ReagentSlimeIchor
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeBleach
-      prob: 0.00001
+      prob: 0.0001
     - id: ReagentSlimeSoap
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeSpacelube
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeBuzzachloricbees
-      prob: 0.0002
+      prob: 0.002
     # - id: ReagentSlimeWehjuice
       # prob: 0.0003
     - id: ReagentCognizine
-      prob: 0.0003
+      prob: 0.003
     - id: ReagentSlimeNecrosol
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimeSpaceDrugs
-      prob: 0.0003
+      prob: 0.003
     - id: ReagentSlimeUnstableMutagen
-      prob: 0.0001
+      prob: 0.001
     - id: ReagentSlimeLead
-      prob: 0.00001
+      prob: 0.0001
     - id: ReagentSlimechlorinetriflouride
-      prob: 0.0002
+      prob: 0.002
     - id: ReagentSlimePotassium
       prob: 0.0002
     # - id: ReagentSlimeLotophagoiOil
       # prob: 0.0001
+
+- type: entity
+  id: XenoVents
+  parent: [VentCrittersBase, BaseGameRule]
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: StationEvent
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
+    earliestStart: 30
+    reoccurrenceDelay: 200
+    minimumPlayers: 30
+    weight: 6 # Really weak compared to other critters
+    duration: 60
+  - type: VentCrittersRule
+    entries:
+    - id: MobXenoPraetorianNPC
+      prob: 0.05
+    - id: MobXenoDroneNPC
+      prob: 0.001
+    - id: MobXenoQueenNPC
+      prob: 0.001
+    - id: MobXenoRavagerNPC
+      prob: 0.001
+    - id: MobXenoRunnerNPC
+      prob: 0.001
+    - id: MobXenoRounyNPC
+      prob: 0.001
+    - id: MobXenoSpitterNPC
+      prob: 0.001
+    - id: MobXenoAcidRunner
+      prob: 0.001
+    - id: MobXenoAcidRunnerPrimed
+      prob: 0.001
+    - id: MobXenoLarva
+      prob: 0.001
+    - id: MobXenoBoiler
+      prob: 0.001
+    - id: MobXenoBoxerWarrior
+      prob: 0.001
+    - id: MobXenoCarrier
+      prob: 0.001
+    - id: MobXenoCrusher
+      prob: 0.001
+    - id: MobXenoChargerCrusher
+      prob: 0.001
+    - id: MobXenoDancerPraetorian
+      prob: 0.001
+    - id: MobXenoDefender
+      prob: 0.001
+    - id: MobXenoSentinel
+      prob: 0.001
+    - id: MobXenoHivelord
+      prob: 0.001
+    - id: MobXenoParasite
+      prob: 0.001
+    - id: MobXenoBloodyLarva
+      prob: 0.001  
+    - id: MobXenoLurker
+      prob: 0.001
+    - id: MobXenoWarrior
+      prob: 0.001
+    
