@@ -416,6 +416,53 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         catch (Exception e)
         {
             _sawmill.Error($"An unexpected error occurred during ship loading for {playerSession.Name}: {e.Message}");
+            
+            // Try to extract ship name from YAML for logging (basic parsing)
+            var shipDetails = "Unknown Ship";
+            try
+            {
+                if (message.YamlData.Contains("shipName:"))
+                {
+                    var lines = message.YamlData.Split('\n');
+                    var shipNameLine = lines.FirstOrDefault(l => l.Trim().StartsWith("shipName:"));
+                    if (shipNameLine != null)
+                    {
+                        var shipName = shipNameLine.Split(':')[1]?.Trim() ?? "Unknown";
+                        shipDetails = $"'{shipName}'";
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors, use default
+            }
+            
+            // Show player feedback for any ship loading failure
+            var playerEntity = playerSession.AttachedEntity;
+            if (playerEntity.HasValue)
+            {
+                if (e.Message.Contains("Alias") && e.Message.Contains("anchor"))
+                {
+                    // YAML corruption - potential tampering
+                    _popup.PopupEntity("Ship data appears corrupted or tampered with. Loading failed.", 
+                                     playerEntity.Value, playerEntity.Value, PopupType.LargeCaution);
+                    
+                    // Play warning sound
+                    _audio.PlayPvs("/Audio/Machines/buzz_sigh.ogg", playerEntity.Value);
+                    
+                    // Log potential tampering and send admin alert
+                    _adminLogger.Add(LogType.ShipYardUsage, LogImpact.Medium, 
+                        $"SHIP CORRUPTION: Player {playerSession.Name} ({playerSession.UserId}) attempted to load corrupted/tampered ship data for ship {shipDetails} - YAML parsing failed: {e.Message}");
+                    
+                    // Send alert to online admins
+                    _chatManager.SendAdminAlert($"SHIP CORRUPTION: {playerSession.Name} attempted to load ship {shipDetails} with corrupted/tampered YAML data");
+                }
+                else
+                {
+                    _popup.PopupEntity($"Ship loading failed: {e.Message}", 
+                                     playerEntity.Value, playerEntity.Value, PopupType.Large);
+                }
+            }
         }
         finally
         {
