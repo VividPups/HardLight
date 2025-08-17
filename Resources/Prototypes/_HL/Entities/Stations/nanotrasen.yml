@@ -129,7 +129,6 @@
   parent:
   - StandardFrontierOutpost
   - BaseStationRecords
-  - BaseStationExpeditions
   categories: [ HideSpawnMenu ]
 
 - type: entity

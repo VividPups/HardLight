@@ -226,22 +226,12 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         var dungeons = await WaitAsyncTask(_dungeon.GenerateDungeonAsync(dungeonConfig, dungeonMod.Proto, mapUid, grid, (Vector2i)dungeonOffset, // Frontier: add dungeonMod.Proto
             _missionParams.Seed));
 
-        if (dungeons == null || dungeons.Count == 0)
-        {
-            _sawmill.Error($"Dungeon generation returned no dungeons for config {dungeonConfig.ID} and mod {dungeonMod.Proto}");
-            // Optionally, create a dummy dungeon or return false to indicate failure
-            return false;
-        }
         var dungeon = dungeons.First();
 
         // Aborty
         if (dungeon.Rooms.Count == 0)
         {
-            var dummyTile = (Vector2i)dungeonOffset;
-            var tiles = new HashSet<Vector2i> { dummyTile };
-            var exterior = new HashSet<Vector2i> { dummyTile };
-            var dummyRoom = new DungeonRoom(tiles, dummyTile, new Box2i(dummyTile, dummyTile), exterior);
-            dungeon.AddRoom(dummyRoom);
+            return false;
         }
 
         expedition.DungeonLocation = dungeonOffset;
@@ -394,29 +384,15 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
                     }
                     break;
                 default:
-                    // No implementation, just skip.
-                    break;
+                    throw new NotImplementedException();
             }
         }
 
         // Frontier: delay ship FTL
         if (shuttleUid is { Valid: true })
         {
-            _sawmill.Debug($"[SalvageMission] FTL: shuttleUid valid: {shuttleUid.Value}, mapUid: {mapUid}, coords: {coords}");
-            if (_entManager.HasComponent<ShuttleComponent>(shuttleUid.Value))
-            {
-                var shuttle = _entManager.GetComponent<ShuttleComponent>(shuttleUid.Value);
-                _sawmill.Debug($"[SalvageMission] FTL: Calling FTLToCoordinates for shuttle {shuttleUid.Value}");
-                _shuttle.FTLToCoordinates(shuttleUid.Value, shuttle, new EntityCoordinates(mapUid, coords), 0f, 5.5f, _salvage.TravelTime);
-            }
-            else
-            {
-                _sawmill.Error($"[SalvageMission] FTL: shuttleUid {shuttleUid.Value} does not have ShuttleComponent");
-            }
-        }
-        else
-        {
-            _sawmill.Error($"[SalvageMission] FTL: shuttleUid is not valid on round start");
+            var shuttle = _entManager.GetComponent<ShuttleComponent>(shuttleUid.Value);
+            _shuttle.FTLToCoordinates(shuttleUid.Value, shuttle, new EntityCoordinates(mapUid, coords), 0f, 5.5f, _salvage.TravelTime);
         }
         // End Frontier
 
@@ -495,14 +471,10 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         await SuspendIfOutOfTime();
 
         var structureComp = _entManager.EnsureComponent<SalvageDestructionExpeditionComponent>(mapUid);
-        SalvageFactionPrototype? faction = null;
-        if (!_prototypeManager.TryIndex<SalvageFactionPrototype>(mission.Faction, out faction))
-            faction = _prototypeManager.EnumeratePrototypes<SalvageFactionPrototype>().FirstOrDefault();
-        SalvageDifficultyPrototype? difficulty = null;
-        if (!_prototypeManager.TryIndex<SalvageDifficultyPrototype>(mission.Difficulty, out difficulty))
-            difficulty = _prototypeManager.EnumeratePrototypes<SalvageDifficultyPrototype>().FirstOrDefault();
+        var faction = _prototypeManager.Index<SalvageFactionPrototype>(mission.Faction);
+        var difficulty = _prototypeManager.Index(mission.Difficulty);
 
-        var shaggy = (faction != null && faction.Configs.ContainsKey("DefenseStructure")) ? faction.Configs["DefenseStructure"] : (faction?.Configs.Values.FirstOrDefault() ?? string.Empty);
+        var shaggy = faction.Configs["DefenseStructure"];
 
         var availableRooms = new ValueList<DungeonRoom>(dungeon.Rooms);
         var availableTiles = new List<Vector2i>();
@@ -524,23 +496,10 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(shaggy))
-                {
-                    var uid = _entManager.SpawnEntity(shaggy, _map.GridTileToLocal(mapUid, grid, tile));
-                    _entManager.AddComponent<SalvageStructureComponent>(uid);
-                    structureComp.Structures.Add(uid);
-                }
-                break;
-            }
-        }
-        // Robust fallback: forcibly spawn at grid origin if nothing else worked
-        while (structureComp.Structures.Count < (difficulty?.DestructionStructures ?? 1))
-        {
-            if (!string.IsNullOrEmpty(shaggy))
-            {
-                var uid = _entManager.SpawnEntity(shaggy, _map.GridTileToLocal(mapUid, grid, Vector2i.Zero));
+                var uid = _entManager.SpawnEntity(shaggy, _map.GridTileToLocal(mapUid, grid, tile));
                 _entManager.AddComponent<SalvageStructureComponent>(uid);
                 structureComp.Structures.Add(uid);
+                break;
             }
         }
     }
@@ -554,11 +513,8 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         await SuspendIfOutOfTime();
 
         // spawn megafauna in a random place
-
-        SalvageFactionPrototype? faction = null;
-        if (!_prototypeManager.TryIndex<SalvageFactionPrototype>(mission.Faction, out faction))
-            faction = _prototypeManager.EnumeratePrototypes<SalvageFactionPrototype>().FirstOrDefault();
-        var prototype = (faction != null && faction.Configs.ContainsKey("Megafauna")) ? faction.Configs["Megafauna"] : (faction?.Configs.Values.FirstOrDefault() ?? string.Empty);
+        var faction = _prototypeManager.Index<SalvageFactionPrototype>(mission.Faction);
+        var prototype = faction.Configs["Megafauna"];
 
         var availableRooms = new ValueList<DungeonRoom>(dungeon.Rooms);
         var availableTiles = new List<Vector2i>();
@@ -581,19 +537,8 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(prototype))
-                {
-                    uid = _entManager.SpawnAtPosition(prototype, _map.GridTileToLocal(mapUid, grid, tile));
-                }
+                uid = _entManager.SpawnAtPosition(prototype, _map.GridTileToLocal(mapUid, grid, tile));
                 break;
-            }
-        }
-        // Robust fallback: forcibly spawn at grid origin if nothing else worked
-        if (uid == EntityUid.Invalid)
-        {
-            if (!string.IsNullOrEmpty(prototype))
-            {
-                uid = _entManager.SpawnAtPosition(prototype, _map.GridTileToLocal(mapUid, grid, Vector2i.Zero));
             }
         }
 
