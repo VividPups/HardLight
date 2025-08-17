@@ -79,6 +79,12 @@
     - id: UnknownShuttleMicroshuttle
     - id: UnknownShuttleSpacebus
     - id: UnknownShuttleSyndieEvacPod
+    - id: ArgocyteVents
+    - id: XenoVents
+    - id: reagentslimeVents
+    - id: SpaceVents
+    - id: CarpVents
+    - id: TickVents
 
 - type: entityTable
   id: BasicAntagEventsTable
@@ -1478,7 +1484,7 @@
   - type: VentCrittersRule
     entries:
     - id: MobTick
-      prob: 0.001
+      prob: 0.01
 
 - type: entity
   id: CarpVents
