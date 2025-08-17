@@ -20,7 +20,6 @@ using Robust.Shared.Timing;
 using Content.Shared.Labels.EntitySystems;
 using Content.Server.GameTicking;
 using Robust.Shared.EntitySerialization.Systems;
-using Content.Shared.Station.Components;
 
 namespace Content.Server.Salvage
 {
