@@ -41,13 +41,8 @@ public sealed partial class SalvageSystem
         var gridEntity = Transform(uid).GridUid ?? uid;
         
         // Find the actual station that owns this ship/grid
-        // Check console entity first (where we store StationMemberComponent), then grid
         EntityUid? actualStation = null;
-        if (TryComp<StationMemberComponent>(uid, out var consoleMember))
-        {
-            actualStation = consoleMember.Station;
-        }
-        else if (TryComp<StationMemberComponent>(gridEntity, out var stationMember))
+        if (TryComp<StationMemberComponent>(gridEntity, out var stationMember))
         {
             actualStation = stationMember.Station;
         }
@@ -236,14 +231,6 @@ public sealed partial class SalvageSystem
         data.CooldownTime = TimeSpan.Zero;
         data.Missions.Clear();
         _salvage.GenerateMissions(data);
-        
-        // Ensure console has StationMemberComponent so FindExpeditionDataForStation can find it
-        var actualGridEntity = Transform(gridEntity).GridUid ?? gridEntity;
-        if (TryComp<StationMemberComponent>(actualGridEntity, out var stationMember))
-        {
-            var stationMemberComp = EnsureComp<StationMemberComponent>(gridEntity);
-            stationMemberComp.Station = stationMember.Station;
-        }
     }
     UpdateConsole(console);
     }
