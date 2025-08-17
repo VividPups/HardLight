@@ -46,7 +46,7 @@
   - id: NFWeaponShotgunBulldog # Frontier: use NF prefix
     amount: 0
     maxAmount: 5
-  - id: NFWeaponShotgunDoubleBarreled # Frontier: use NF prefix
+  - id: WeaponShotgunDoubleBarreled # Frontier: use NF prefix
     amount: 0
     maxAmount: 5
   - id: NFWeaponShotgunEnforcer # Frontier: use NF prefix

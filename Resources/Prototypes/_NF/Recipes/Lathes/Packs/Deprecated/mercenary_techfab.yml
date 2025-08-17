@@ -83,9 +83,9 @@
   - NFWeaponEnergyPistolLaser # After the changes made to windows shouldn't be that much of an issue now if it's widely available
   - NFWeaponRevolverArgenti
   - NFWeaponPistolMk58
-  - NFWeaponShotgunDoubleBarreled
-  - NFWeaponRifleAssaultNovaliteC1
-  - NFWeaponRifleAssaultGestio
+  - WeaponShotgunDoubleBarreled
+  - WeaponRifleNovaliteC1
+  - WeaponRifleGestio
   - BaseBallBatNF
   - CrossbowModern
   - WeaponPistolPollock
