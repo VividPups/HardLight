@@ -3,7 +3,7 @@
   isGrid: true # Did you know that Colcomm is the only "game map" that isn't actually a map? Send help.
   mapName: 'Colonial Command'
   mapPath: /Maps/colcomm.yml
-  minPlayers: 0
+  minPlayers: 1
   stations:
     Colcomm:
       stationProto: RecordsFrontierOutpost
@@ -15,7 +15,5 @@
             prefixCreator: 'TG'
         - type: ExtraStationInformation
           lobbySortOrder: 3
-        - type: StationJobs
-          availableJobs:
         - type: StationDeadDrop
           maxDeadDrops: 0
