@@ -35,7 +35,6 @@
     - BaseStationMail
   categories: [ HideSpawnMenu ]
   components:
-    - type: TransferableStation
     - type: Transform
 
 - type: entity
