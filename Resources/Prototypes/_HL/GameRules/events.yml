@@ -1542,7 +1542,7 @@
       
 - type: entity
   id: reagentslimeVents
-  parent: BaseGameRule
+  parent: [VentCrittersBase, BaseGameRule]
   categories: [ HideSpawnMenu ]
   components:
   - type: StationEvent
