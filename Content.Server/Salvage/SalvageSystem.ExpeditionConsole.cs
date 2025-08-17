@@ -15,7 +15,6 @@ using Content.Server.Salvage.Expeditions; // Frontier
 using Content.Shared.Mind.Components; // Frontier
 using Content.Shared.Mobs.Components; // Frontier
 using Robust.Shared.Physics; // Frontier
-using Content.Shared.Station.Components;
 
 namespace Content.Server.Salvage;
 
