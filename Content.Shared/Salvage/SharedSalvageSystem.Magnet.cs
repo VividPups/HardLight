@@ -96,6 +96,8 @@ public abstract partial class SharedSalvageSystem
                 var mapIndex = rand.Next(_salvageMaps.Count);
                 var map = _salvageMaps[mapIndex];
 
+                var rewards = GetRewards(difficulty, rand);
+
                 return new SalvageOffering
                 {
                     SalvageMap = map,
