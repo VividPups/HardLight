@@ -136,7 +136,7 @@ public abstract partial class SharedSalvageSystem : EntitySystem
         return rewards;
     }
 
-    private string[] RewardsForDifficulty(DifficultyRating  rating)
+    private string[] RewardsForDifficulty(int rating)
     {
         var t1 = "ExpeditionRewardT1";
         var t2 = "ExpeditionRewardT2";
