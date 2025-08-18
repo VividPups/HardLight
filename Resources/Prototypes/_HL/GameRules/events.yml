@@ -1443,7 +1443,7 @@
   - type: VentCrittersRule
     entries:
     - id: MobArgocyteSlurva
-      prob: 0.05
+      prob: 0.008
     - id: MobArgocyteBarrier
       prob: 0.001
     - id: MobArgocyteSkitter
