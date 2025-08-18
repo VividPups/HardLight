@@ -1,4 +1,4 @@
-- type: entity
+- type: entity #
   id: MobIPC
   parent: PlayerSiliconHumanoidBase
   name: Urist McPositronic
@@ -88,6 +88,10 @@
   - type: BatteryDrinker
   - type: EncryptionKeyHolder
     keySlots: 4
+  - type: ContainerFill #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    containers:
+      key_slots:
+      - EncryptionKeyCommon
     examineWhileLocked: false
     keysExtractionMethod: Cutting
     keysUnlocked: false
