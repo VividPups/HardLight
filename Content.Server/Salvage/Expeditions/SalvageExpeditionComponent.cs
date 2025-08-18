@@ -61,4 +61,17 @@ public sealed partial class SalvageExpeditionComponent : SharedSalvageExpedition
     // [DataField]
     // public ResolvedSoundSpecifier SelectedSong;
     // End Frontier: moved to Shared
+    // Frontier: expedition difficulty and rewards
+    /// <summary>
+    /// The difficulty this mission had or, in the future, was selected.
+    /// </summary>
+    [ViewVariables(VVAccess.ReadWrite), DataField("difficulty")]
+    public DifficultyRating Difficulty;
+
+    /// <summary>
+    /// List of items to order on mission completion
+    /// </summary>
+    [ViewVariables(VVAccess.ReadWrite), DataField("rewards", customTypeSerializer: typeof(PrototypeIdListSerializer<EntityPrototype>))]    [ViewVariables(VVAccess.ReadWrite), DataField("rewards", customTypeSerializer: typeof(PrototypeIdListSerializer<EntityPrototype>))]
+    public List<string> Rewards = default!;    public List<string> Rewards = default!;
+    // End Frontier: expedition difficulty and rewards    // End Frontier: expedition difficulty and rewards
 }
