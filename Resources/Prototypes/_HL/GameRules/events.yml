@@ -85,6 +85,7 @@
     - id: SpaceVents
     - id: CarpVents
     - id: TickVents
+    - id: AiVents
 
 - type: entityTable
   id: BasicAntagEventsTable
@@ -1679,4 +1680,58 @@
       prob: 0.001
     - id: MobXenoWarrior
       prob: 0.001
-    
+      
+- type: entity
+  id: AiVents
+  parent: [VentCrittersBase, BaseGameRule]
+  categories: [ HideSpawnMenu ]
+  components:
+  - type: StationEvent
+    startAnnouncement: station-event-vent-creatures-start-announcement
+    startAudio:
+      path: /Audio/Announcements/attention.ogg
+    earliestStart: 30
+    reoccurrenceDelay: 200
+    minimumPlayers: 30
+    weight: 6 # Really weak compared to other critters
+    duration: 60
+  - type: VentCrittersRule
+    entries:
+    - id: MobRogueSiliconScrap
+      prob: 0.008
+    - id: MobRogueSiliconScrapThreads
+      prob: 0.008
+    - id: MobRogueSiliconScrapThrusters
+      prob: 0.008
+    - id: MobRogueSiliconScrapThrustersRanged
+      prob: 0.008
+    - id: MobRogueSiliconScrapFlayer
+      prob: 0.007
+    - id: MobRogueSiliconDroneLethals
+      prob: 0.005
+    - id: MobRogueSiliconDroneNonLethals
+      prob: 0.01
+    - id: MobRogueSiliconDroneScience
+      prob: 0.001
+    - id: MobRogueSiliconViscerator
+      prob: 0.009
+    - id: MobRogueSiliconServo
+      prob: 0.001
+    - id: MobRogueSiliconHerder
+      prob: 0.001
+    - id: MobRogueSiliconHunter
+      prob: 0.001
+    - id: MobRogueSiliconTesla
+      prob: 0.001
+    - id: MobRogueSiliconGuardian
+      prob: 0.001
+    - id: MobRogueSiliconBoss
+      prob: 0.0001
+    - id: MobRogueSiliconScrapAsteroid
+      prob: 0.001
+    - id: MobRogueSiliconScrapThreadsAsteroid
+      prob: 0.001
+    - id: MobRogueSiliconScrapThrustersAsteroid
+      prob: 0.001
+    - id: MobRogueSiliconScrapThrustersRangedAsteroid
+      prob: 0.001
