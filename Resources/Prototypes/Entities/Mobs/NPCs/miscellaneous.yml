@@ -243,12 +243,42 @@
   parent: MobLaserRaptor
   description: What has science Wrought?!
   components:
+    - type: LayingDown
+    - type: IdExaminable
+    - type: InventorySlots
+    - type: Stripping
+    - type: Strippable
+    - type: Cuffable
+    - type: Hands
+    - type: Access
+    - type: Tag
+      tags:
+        - CanPilot
+        - FootstepSound
+        - DoorBumpOpener
+    - type: Prying
+      pryPowered: true
+      force: true
+      speedModifier: 20 # fast because dragon strong
+      useSound:
+        path: /Audio/Items/crowbar.ogg
     - type: Sprite
       drawdepth: Mobs
       sprite: _HL/Mobs/Characters/drd.rsi
       layers:
         - map: [ "enum.DamageStateVisualLayers.Base" ]
           state: DrDino
+    - type: ComplexInteraction
+    - type: Targeting # Shitmed Change
+    - type: SurgeryTarget # Shitmed Change
+    - type: Pullable
+    - type: Puller
+    - type: AnimationPlayer
+    - type: CanEscapeInventory
+    - type: CanEnterCryostorage
+    - type: StandingState
+    - type: BodyEmotes
+      soundsId: GeneralBodyEmotes
     - type: DamageStateVisuals
       states:
         Alive:
