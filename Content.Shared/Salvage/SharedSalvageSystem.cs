@@ -81,7 +81,7 @@ public abstract partial class SharedSalvageSystem : EntitySystem
 
         var duration = TimeSpan.FromSeconds(CfgManager.GetCVar(CCVars.SalvageExpeditionDuration));
         
-        var rewards = GetRewards(difficulty.ID, rand);
+        var rewards = GetRewards(int.Parse(difficulty.ID), rand);
         
         return new SalvageMission(seed, dungeon.ID, faction.ID, biome.ID, air.ID, temp.Temperature, light.Color, duration, rewards, mods, difficulty.ID, config); // Frontier: add difficulty.ID, config
     }
