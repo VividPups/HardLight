@@ -1,4 +1,5 @@
 salvage-expedition-window-finish = Finish expedition
+salvage-expedition-window-rewards = Rewards:
 salvage-expedition-announcement-early-finish = The expedition was completed ahead of schedule. Shuttle will depart in {$departTime} seconds.
 salvage-expedition-announcement-destruction = { $count ->
     [1] Destroy the {$structure} before the expedition ends.
