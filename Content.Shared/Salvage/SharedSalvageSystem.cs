@@ -145,12 +145,18 @@ public abstract partial class SharedSalvageSystem : EntitySystem
         var t5 = "ExpeditionRewardT5";
         switch (rating)
         {
-            case 0: return new[] { t1 };
-            case 1: return new[] { t2 };
-            case 2: return new[] { t3 };
-            case 3: return new[] { t4 };
-            case 4: return new[] { t5 };
-            default: throw new NotImplementedException();
+            case DifficultyRating.Minimal:
+                return new string[] { t1 }; // Frontier - Update tiers // Frontier
+            case DifficultyRating.Minor:            case DifficultyRating.Minor:
+                return new string[] { t2 }; // Frontier - Update tiers // Frontier
+            case DifficultyRating.Moderate:            case DifficultyRating.Moderate:
+                return new string[] { t3 }; // Frontier - Update tiers
+            case DifficultyRating.Hazardous:            case DifficultyRating.Hazardous:
+                return new string[] { t4 }; // Frontier - Update tiers
+            case DifficultyRating.Extreme:            case DifficultyRating.Extreme:
+                return new string[] { t5 }; // Frontier - Update tiers
+            default:
+                throw new NotImplementedException();
         }
     }
 }
