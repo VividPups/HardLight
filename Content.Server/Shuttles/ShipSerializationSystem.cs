@@ -61,13 +61,8 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly SharedContainerSystem _containerSystem = default!;
         [Dependency] private readonly ServerIdentityService _serverIdentity = default!;
         [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
-        [Dependency] private readonly IGameTiming _gameManager = default!;
         
         private ISawmill _sawmill = default!;
-        
-        // Checksum cache to avoid regeneration during validation
-        private readonly Dictionary<string, string> _checksumCache = new();
-        private readonly Dictionary<string, string> _fastChecksumCache = new();
 
         private ISerializer _serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -81,31 +76,6 @@ namespace Content.Server.Shuttles.Save
         {
             base.Initialize();
             _sawmill = Logger.GetSawmill("ship-serialization");
-        }
-
-        public override void Update(float frameTime)
-        {
-            base.Update(frameTime);
-            
-            // Clear caches periodically to prevent memory leaks (every 5 minutes)
-            if (_gameManager.RealTime.TotalSeconds % 300 < 1.0)
-            {
-                ClearChecksumCaches();
-            }
-        }
-        
-        private void ClearChecksumCaches()
-        {
-            var checksumCacheSize = _checksumCache.Count;
-            var fastChecksumCacheSize = _fastChecksumCache.Count;
-            
-            _checksumCache.Clear();
-            _fastChecksumCache.Clear();
-            
-            if (checksumCacheSize > 0 || fastChecksumCacheSize > 0)
-            {
-                _sawmill.Debug($"Cleared checksum caches: {checksumCacheSize} legacy, {fastChecksumCacheSize} fast entries");
-            }
         }
 
     public ShipGridData SerializeShip(EntityUid gridId, NetUserId playerId, string shipName)
@@ -174,27 +144,25 @@ namespace Content.Server.Shuttles.Save
                 // No decal component found
             }
 
-            // Optimized entity serialization - uses faster grid child enumeration
+            // Enhanced entity serialization - includes all entities on grid and in containers
             var serializedEntities = new HashSet<EntityUid>();
             
-            // Use grid's child enumerator instead of global entity query for better performance
-            var gridTransform = _entityManager.GetComponent<TransformComponent>(gridId);
-            var childEnumerator = gridTransform.ChildEnumerator;
-            
-            while (childEnumerator.MoveNext(out var childUid))
+            foreach (var entity in _entityManager.EntityQuery<TransformComponent>())
             {
-                if (!_entityManager.TryGetComponent<TransformComponent>(childUid, out var childTransform))
+                if (entity.GridUid != gridId)
                     continue;
-                    
-                var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(childUid);
+
+                var uid = entity.Owner;
+                var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(uid);
                 var proto = meta?.EntityPrototype?.ID ?? string.Empty;
 
                 // Serialize all entities, including contained ones
-                var entityData = SerializeEntity(childUid, childTransform, proto, gridId);
+                var entityData = SerializeEntity(uid, entity, proto, gridId);
                 if (entityData != null)
                 {
                     gridData.Entities.Add(entityData);
-                    serializedEntities.Add(childUid);
+                    serializedEntities.Add(uid);
+                    // Serialized entity
                 }
             }
 
@@ -302,8 +270,88 @@ namespace Content.Server.Shuttles.Save
             
                 if (checksumValidationEnabled)
                 {
-                    // Enhanced validation with automatic legacy migration
-                    ValidateLegacyChecksumAndMigrate(originalStoredChecksum, actualChecksum, data, out wasLegacyConverted);
+                    // Detect checksum format and handle appropriately
+                    bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
+                    bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
+                    bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
+                    bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
+                    
+                    if (isLegacySHA)
+                    {
+                        // Legacy SHA256 checksum - regenerate current checksum and update file metadata for future saves
+                        _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum}");
+                        _sawmill.Info($"Legacy checksum detected - ship will be converted to secure format");
+                        // Current checksum
+                        
+                        // Update the metadata with new checksum for conversion
+                        data.Metadata.Checksum = actualChecksum;
+                    wasLegacyConverted = true;
+                    // Legacy checksum compatibility mode
+                }
+                else if (isLegacyEnhanced)
+                {
+                    // Handle legacy enhanced format - strip old ":PP-" suffix if present
+                    var cleanStoredChecksum = originalStoredChecksum.Substring(0, originalStoredChecksum.IndexOf(":PP-"));
+                    _sawmill.Info($"Detected legacy enhanced checksum format, using cleaned version: {cleanStoredChecksum}");
+                    
+                    if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                        _sawmill.Error($"Expected: {cleanStoredChecksum}");
+                        _sawmill.Error($"Actual: {actualChecksum}");
+                        _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
+                        _sawmill.Error($"SECURITY: Tampered ship - {data.Metadata.ShipName} by player {data.Metadata.PlayerId}");
+                        throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                    }
+                    
+                    _sawmill.Info("Legacy enhanced checksum validation passed successfully");
+                }
+                else if (isLegacyBasic)
+                {
+                    // Legacy basic format (before container support) - convert to new format
+                    _sawmill.Warning($"Legacy basic checksum detected: {originalStoredChecksum}");
+                    _sawmill.Info($"Basic checksum detected - ship will be upgraded to enhanced format");
+                    _sawmill.Info($"Current enhanced checksum would be: {actualChecksum}");
+                    
+                    // Update the metadata with new checksum for conversion
+                    data.Metadata.Checksum = actualChecksum;
+                    wasLegacyConverted = true;
+                    _sawmill.Info("Legacy basic checksum compatibility mode - validation passed, marked for conversion");
+                }
+                else if (isCurrentFormat)
+                {
+                    // Current enhanced format validation
+                    if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Error($"CHECKSUM VALIDATION FAILED!");
+                        _sawmill.Error($"Expected: {originalStoredChecksum}");
+                        _sawmill.Error($"Actual: {actualChecksum}");
+                        _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
+                        _sawmill.Error($"SECURITY: Tampered ship - {data.Metadata.ShipName} by player {data.Metadata.PlayerId}");
+                        throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
+                    }
+                    
+                    _sawmill.Info("Enhanced checksum validation passed successfully");
+                }
+                else
+                {
+                    // Unknown format - try to validate anyway but warn
+                    _sawmill.Warning($"Unknown checksum format detected: {originalStoredChecksum}");
+                    _sawmill.Warning($"Attempting validation with current format...");
+                    
+                    if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _sawmill.Warning($"Checksum validation failed for unknown format");
+                        _sawmill.Info($"Expected: {originalStoredChecksum}");
+                        _sawmill.Info($"Actual: {actualChecksum}");
+                        _sawmill.Warning($"Ship may have been modified or saved with different version");
+                        // Don't throw for unknown formats - allow loading but log warning
+                    }
+                    else
+                    {
+                        _sawmill.Info("Unknown format checksum validation passed");
+                    }
+                }
                 }
                 else
                 {
@@ -765,81 +813,7 @@ namespace Content.Server.Shuttles.Save
 
         private string GenerateChecksum(List<GridData> grids)
         {
-            // Check if fast checksums are enabled
-            var useFastChecksums = _configManager.GetCVar(NFCCVars.ShipyardFastChecksums);
-            
-            if (useFastChecksums)
-            {
-                return GenerateFastChecksum(grids);
-            }
-            else
-            {
-                return GenerateLegacyChecksum(grids);
-            }
-        }
-        
-        private string GenerateFastChecksum(List<GridData> grids)
-        {
-            // Create cache key from grid structure
-            var cacheKey = string.Join("|", grids.Select(g => $"{g.GridId}:{g.Tiles.Count}:{g.Entities.Count}"));
-            
-            // Check cache first
-            if (_fastChecksumCache.TryGetValue(cacheKey, out var cachedChecksum))
-            {
-                _sawmill.Debug($"Using cached fast checksum: {cachedChecksum}");
-                return cachedChecksum;
-            }
-            
-            // Fast SHA-based checksum focusing on deterministic, serializable data only
-            var hashInput = new StringBuilder();
-            
-            foreach (var grid in grids)
-            {
-                // Core grid structure (always deterministic)
-                hashInput.Append($"G{grid.GridId}:T{grid.Tiles.Count}:E{grid.Entities.Count}:");
-                
-                // Tile data hash (no sorting, XOR-based for speed)
-                var tileDataHash = 0;
-                foreach (var tile in grid.Tiles)
-                {
-                    tileDataHash ^= ComputeStringHash($"{tile.TileType}{tile.X}{tile.Y}");
-                }
-                hashInput.Append($"TH{tileDataHash}:");
-                
-                // Entity essentials hash (prototype + position only, no unreliable component data)
-                var entityDataHash = 0;
-                foreach (var entity in grid.Entities)
-                {
-                    if (!string.IsNullOrEmpty(entity.Prototype))
-                    {
-                        var posX = Math.Round(entity.Position.X, 1);
-                        var posY = Math.Round(entity.Position.Y, 1);
-                        entityDataHash ^= ComputeStringHash($"{entity.Prototype}{posX}{posY}");
-                    }
-                }
-                hashInput.Append($"EH{entityDataHash}:");
-                
-                // Container relationship counts (deterministic, no component chaos)
-                var containerCount = grid.Entities.Count(e => e.IsContainer);
-                var containedCount = grid.Entities.Count(e => e.IsContained);
-                hashInput.Append($"C{containerCount}x{containedCount};");
-            }
-            
-            // Remove trailing semicolon
-            var finalInput = hashInput.ToString().TrimEnd(';');
-            var dataHash = ComputeSha256Hash(finalInput);
-            var result = $"FAST:{dataHash[..16]}"; // 16-char hash for performance
-            
-            // Cache the result
-            _fastChecksumCache[cacheKey] = result;
-            
-            _sawmill.Info($"Generated fast checksum for {grids.Count} grids, {grids.Sum(g => g.Entities.Count)} entities (hash: {dataHash[..8]}...)");
-            return result;
-        }
-        
-        private string GenerateLegacyChecksum(List<GridData> grids)
-        {
-            // Original enhanced tamper-detection checksum (kept for compatibility)
+            // Enhanced tamper-detection checksum using detailed entity data including containers and components
             var checksumBuilder = new StringBuilder();
             
             foreach (var grid in grids)
@@ -935,18 +909,6 @@ namespace Content.Server.Shuttles.Save
             
             _sawmill.Info($"Generated server-bound checksum with binding: {serverBindingShort}");
             return serverBoundChecksum;
-        }
-        
-        private static int ComputeSimpleHash(string input)
-        {
-            // Fast hash for performance - simple XOR-based hash
-            var hash = 0;
-            foreach (char c in input)
-            {
-                hash ^= c;
-                hash = (hash << 1) | (hash >> 31); // Rotate left
-            }
-            return hash & 0x7FFFFFFF; // Ensure positive
         }
         
         private bool ValidateServerBoundChecksum(string storedChecksum, ShipGridData data)
@@ -1923,103 +1885,6 @@ namespace Content.Server.Shuttles.Save
             }
             
             // Legacy reconstruction complete
-        }
-        
-        private void ValidateLegacyChecksumAndMigrate(string originalStoredChecksum, string actualChecksum, ShipGridData data, out bool wasLegacyConverted)
-        {
-            wasLegacyConverted = false;
-            
-            // Detect checksum format and handle appropriately
-            bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
-            bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
-            bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
-            bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
-            bool isFastFormat = originalStoredChecksum.StartsWith("FAST:");
-            
-            if (isFastFormat)
-            {
-                // Fast format validation - already current, no migration needed
-                var expectedFastChecksum = GenerateFastChecksum(data.Grids);
-                if (!string.Equals(originalStoredChecksum, expectedFastChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"FAST CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {originalStoredChecksum}");
-                    _sawmill.Error($"Actual: {expectedFastChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Fast checksum mismatch! Ship data may have been tampered with.");
-                }
-                _sawmill.Info("Fast checksum validation passed successfully");
-            }
-            else if (isLegacySHA)
-            {
-                // Legacy SHA256 checksum - auto-migrate to fast format
-                _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum[..16]}...");
-                _sawmill.Info($"Legacy SHA checksum detected - ship will be converted to fast format");
-                
-                // Generate new fast checksum and mark for conversion
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy SHA ship auto-migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isLegacyEnhanced)
-            {
-                // Handle legacy enhanced format - validate then migrate to fast
-                var cleanStoredChecksum = originalStoredChecksum.Substring(0, originalStoredChecksum.IndexOf(":PP-"));
-                _sawmill.Info($"Detected legacy enhanced checksum format, validating then migrating...");
-                
-                if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"LEGACY ENHANCED CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {cleanStoredChecksum}");
-                    _sawmill.Error($"Actual: {actualChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-                }
-                
-                // Validation passed - migrate to fast format
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy enhanced checksum validated and migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isLegacyBasic)
-            {
-                // Legacy basic format - migrate to fast format (can't validate reliably)
-                _sawmill.Warning($"Legacy basic checksum detected: {originalStoredChecksum}");
-                _sawmill.Info($"Basic checksum detected - ship will be upgraded to fast format");
-                
-                // For basic format, we can't do comprehensive validation, but we can migrate
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy basic checksum migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isCurrentFormat)
-            {
-                // Current enhanced format - validate then migrate to fast
-                if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"ENHANCED CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {originalStoredChecksum}");
-                    _sawmill.Error($"Actual: {actualChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-                }
-                
-                // Validation passed - migrate to fast format
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Enhanced checksum validated and migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else
-            {
-                // Unknown format - allow load but migrate to fast format
-                _sawmill.Warning($"Unknown checksum format detected: {originalStoredChecksum}");
-                _sawmill.Warning($"Migrating to fast format for compatibility...");
-                
-                // Migrate to fast format regardless of validation
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Unknown format migrated to fast format: {data.Metadata.Checksum}");
-            }
         }
 
     }
