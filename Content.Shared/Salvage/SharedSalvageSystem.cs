@@ -21,63 +21,6 @@ public abstract partial class SharedSalvageSystem : EntitySystem
     [Dependency] protected readonly IConfigurationManager CfgManager = default!;
     [Dependency] private readonly IPrototypeManager _proto = default!;
 
-#region Descriptions
-
-    public string GetMissionDescription(SalvageMission mission)
-    {
-        // Hardcoded in coooooz it's dynamic based on difficulty and I'm lazy.
-        switch (mission.Mission)
-        {
-            case SalvageMissionType.Mining:
-                // Taxation: , ("tax", $"{GetMiningTax(mission.Difficulty) * 100f:0}")
-                return Loc.GetString("salvage-expedition-desc-mining");
-            case SalvageMissionType.Destruction:
-                var proto = _proto.Index<SalvageFactionPrototype>(mission.Faction).Configs["DefenseStructure"];
-
-                return Loc.GetString("salvage-expedition-desc-structure",
-                    ("count", GetStructureCount(mission.Difficulty)),
-                    ("structure", _loc.GetEntityData(proto).Name));
-            case SalvageMissionType.Elimination:
-                return Loc.GetString("salvage-expedition-desc-elimination");
-            default:
-                throw new NotImplementedException();
-        }
-    }
-
-    public float GetMiningTax(DifficultyRating baseRating)
-    {
-        return 0.6f + (int) baseRating * 0.05f;
-    }
-
-    /// <summary>
-    /// Gets the amount of structures to destroy.
-    /// </summary>
-    public int GetStructureCount(DifficultyRating baseRating)
-    {
-        return 1 + (int) baseRating * 2;
-    }
-
-    #endregion
-
-    public int GetDifficulty(DifficultyRating rating)
-    {
-        switch (rating)
-        {
-            case DifficultyRating.Minimal:
-                return 4;
-            case DifficultyRating.Minor:
-                return 6;
-            case DifficultyRating.Moderate:
-                return 8;
-            case DifficultyRating.Hazardous:
-                return 10;
-            case DifficultyRating.Extreme:
-                return 12;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(rating), rating, null);
-        }
-    }
-
     /// <summary>
     /// Main loot table for salvage expeditions.
     /// </summary>
@@ -85,11 +28,7 @@ public abstract partial class SharedSalvageSystem : EntitySystem
     public const string ExpeditionsLootProto = "NFSalvageLootModerate"; // Frontier: SalvageLoot<NFSalvageLootModerate
 
     public string GetFTLName(LocalizedDatasetPrototype dataset, int seed)
-    {   
-        var rating = (float) GetDifficulty(difficulty);
-        // Don't want easy missions to have any negative modifiers but also want
-        // easy to be a 1 for difficulty.
-        rating -= 1f;
+    {
         var random = new System.Random(seed);
         return $"{Loc.GetString(dataset.Values[random.Next(dataset.Values.Count)])}-{random.Next(10, 100)}-{(char) (65 + random.Next(26))}";
     }
