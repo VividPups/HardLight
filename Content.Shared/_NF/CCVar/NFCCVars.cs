@@ -116,12 +116,6 @@ public sealed class NFCCVars
     public static readonly CVarDef<bool> ShipyardChecksumValidation =
         CVarDef.Create("shuttle.shipyard_checksum_validation", true, CVar.SERVERONLY);
 
-    /// <summary>
-    /// Whether to use fast SHA-based checksums for new ships. Legacy checksums are auto-migrated.
-    /// </summary>
-    public static readonly CVarDef<bool> ShipyardFastChecksums =
-        CVarDef.Create("shuttle.shipyard_fast_checksums", true, CVar.SERVERONLY);
-
     /*
      * Salvage
      */
