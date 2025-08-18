@@ -88,13 +88,14 @@
   - type: BatteryDrinker
   - type: EncryptionKeyHolder
     keySlots: 4
-  - type: ContainerFill #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-    containers:
-      key_slots:
-      - EncryptionKeyCommon
     examineWhileLocked: false
     keysExtractionMethod: Cutting
     keysUnlocked: false
+  - type: ContainerFill #Hardlight change
+    containers:
+      key_slots:
+      - EncryptionKeyCommon
+
   - type: ActiveRadio
   - type: IntrinsicRadioReceiver
   - type: IntrinsicRadioTransmitter
