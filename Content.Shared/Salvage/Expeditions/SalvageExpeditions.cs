@@ -146,6 +146,7 @@ public sealed record SalvageMission(
     float Temperature,
     Color? Color,
     TimeSpan Duration,
+    List<string> Rewards,
     List<string> Modifiers,
     ProtoId<SalvageDifficultyPrototype> Difficulty, // Frontier
     SalvageMissionType MissionType) // Frontier
@@ -189,7 +190,11 @@ public sealed record SalvageMission(
     /// Mission duration.
     /// </summary>
     public TimeSpan Duration = Duration;
-
+    
+    /// <summary>
+    /// Mission Rewards.
+    /// </summary>
+    public List<string> Rewards = Rewards;
     /// <summary>
     /// Modifiers (outside of the above) applied to the mission.
     /// </summary>
