@@ -124,18 +124,15 @@ public abstract partial class SharedSalvageSystem : EntitySystem
         throw new InvalidOperationException();
     }
 
-    private List<string> GetRewards(DifficultyRating difficulty, System.Random rand)
+    private List<string> GetRewards(int difficulty, System.Random rand)
     {
         var rewards = new List<string>(3);
         var ids = RewardsForDifficulty(difficulty);
-
         foreach (var id in ids)
         {
-            // pick a random reward to give
             var weights = _proto.Index<WeightedRandomEntityPrototype>(id);
             rewards.Add(weights.Pick(rand));
         }
-
         return rewards;
     }
 
