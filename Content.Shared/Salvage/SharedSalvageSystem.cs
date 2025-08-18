@@ -12,6 +12,7 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
+using Content.Server.Salvage.Expeditions;
 
 namespace Content.Shared.Salvage;
 
