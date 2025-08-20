@@ -21,6 +21,8 @@
     neutralveryblack: "#404040"
     neutralsuperblack: "#202020"
     something: "#069420"
+    cartelpurple: "#7c00ee"
+    arcadiared: "#9f2a2e"
 
 - type: palette
   id: Sotek
