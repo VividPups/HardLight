@@ -11,7 +11,7 @@
         doAfter: 5
       - material: BluespaceOre
         amount: 5
-        doafter: 5
+        doAfter: 5
       - material: Cable
         amount: 5
         doAfter: 5
