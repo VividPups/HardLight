@@ -33,14 +33,14 @@
   - type: BallisticAmmoProvider
     capacity: 280 # 8 mags per box similar to rifle box
     proto: Cartridge45_ACPFMJ
-  - type: Sprite
+  - type: Sprite       # Hardlight change for the Error to be fix for RSI
     layers:
-    - state: base-b
+    - state: base-b # Frontier: base-big<base-b
       map: ["enum.GunVisualLayers.Base"]
-    - state: magb-1
+    - state: magb-1 # Frontier: mag-big-1<magb-1
       map: ["enum.GunVisualLayers.Mag"]
   - type: MagazineVisuals
-    magState: mag-big
+    magState: magb # Frontier: mag-big<magb
     steps: 4
     zeroVisible: false
   - type: Appearance

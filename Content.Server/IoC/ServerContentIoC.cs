@@ -32,6 +32,7 @@ using Content.Shared.Kitchen;
 using Content.Shared.Players.PlayTimeTracking;
 using Content.Shared.Players.RateLimiting;
 using Content.Server._FS.DiscordAuth; // Floofstation
+using Content.Server.Shuttles;
 
 namespace Content.Server.IoC
 {
@@ -83,6 +84,7 @@ namespace Content.Server.IoC
             IoCManager.Register<CVarControlManager>();
             IoCManager.Register<MiniAuthManager>(); //Frontier
             IoCManager.Register<DiscordAuthManager>(); //Floofstation
+            IoCManager.Register<ServerIdentityService>();
         }
     }
 }

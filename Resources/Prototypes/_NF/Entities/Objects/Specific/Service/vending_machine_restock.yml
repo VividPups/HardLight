@@ -16,14 +16,15 @@
     - state: refill_salvage # Update this later with a new sprite
 
 - type: entity
-  parent: BaseVendingMachineRestock
+  parent: BaseVendingMachineRestock #
   id: VendingMachineRestockAmmo
   name: Liberation Station restock box
   description: A box full of ammo and guns for the Liberation Station. 2TH AMENDMENT. A label reads "THE BOX IS TAMPER-PROOF AND WILL DESTROY ITS CONTENT ON HARM."
   components:
   - type: VendingMachineRestock
     canRestock:
-    - WeaponryWorksVendInventory
+    - WeaponryWorksVendPOIInventory # Hardlight change so the liberation station can liberate
+    - WeaponryWorksVendInventory # Hardlight change so the liberation station can liberate
   - type: Sprite
     layers:
     - state: base

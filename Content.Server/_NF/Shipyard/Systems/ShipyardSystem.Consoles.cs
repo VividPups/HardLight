@@ -24,6 +24,7 @@ using Content.Shared.Mobs.Systems;
 using Content.Server.Maps;
 using Content.Shared.StationRecords;
 using Content.Server.Chat.Systems;
+using Content.Server.Chat.Managers;
 using Content.Server.Mind;
 using Content.Server.Preferences.Managers;
 using Content.Server.StationRecords;
@@ -60,6 +61,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
     [Dependency] private readonly IdCardSystem _idSystem = default!;
     [Dependency] private readonly StationRecordsSystem _records = default!;
     [Dependency] private readonly ChatSystem _chat = default!;
+    [Dependency] private readonly IChatManager _chatManager = default!;
     [Dependency] private readonly MindSystem _mind = default!;
     [Dependency] private readonly ShuttleRecordsSystem _shuttleRecordsSystem = default!;
 
@@ -398,6 +400,14 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         }
 
         bool voucherUsed = deed.PurchasedWithVoucher;
+
+        // Check if this is a loaded ship by looking at the ship's deed component
+        if (TryComp<ShuttleDeedComponent>(shuttleUid.Value, out var shipDeed) && shipDeed.PurchasedWithVoucher)
+        {
+            ConsolePopup(player, "This vessel cannot be sold as it was loaded from a saved manifest.");
+            PlayDenySound(player, uid, component);
+            return;
+        }
 
         if (!TryComp<BankAccountComponent>(player, out var bank))
         {
@@ -828,7 +838,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
         TryParseShuttleName(deed.Comp, shuttleName!);
         deed.Comp.ShuttleOwner = shuttleOwner;
         deed.Comp.PurchasedWithVoucher = purchasedWithVoucher;
-        Dirty(deed);
+        // Note: Removed Dirty() call to prevent networking error on non-networked components
     }
 
     private void OnInitDeedSpawner(EntityUid uid, StationDeedSpawnerComponent component, MapInitEvent args)
