@@ -71,9 +71,9 @@
 ## Weapons
   - NFWeaponEnergyPistolLaserSvalinn # After the changes made to windows shouldn't be that much of an issue now if it's widely available
   - NFWeaponEnergyPistolLaser
-  - NFWeaponPistolMk58
-  - NFWeaponRifleAssaultNovaliteC1
-  - NFWeaponRifleAssaultGestio
+  - WeaponPistolMk58
+  - WeaponRifleNovaliteC1
+  - WeaponRifleGestio
   - BaseBallBatNF
   - Katana
   - KukriKnifeNF
