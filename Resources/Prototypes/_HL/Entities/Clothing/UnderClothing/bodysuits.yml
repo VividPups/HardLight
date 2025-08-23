@@ -1,0 +1,135 @@
+# Faction Bodysuits
+# Inherit from BodysuitBase (latex bodysuit) with accessory slots
+
+# Arcadia Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitArcadia
+  name: arcadia bodysuit
+  description: A form-fitting bodysuit featuring Arcadia corporate colors and branding.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/arcadiaskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/arcadiaskinsuit.rsi
+
+# Cybersun Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitCybersun
+  name: cybersun bodysuit
+  description: A sleek bodysuit with Cybersun's technological aesthetic and advanced materials.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/cybersunskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/cybersunskinsuit.rsi
+
+# Dirizher Cartel Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitCartel
+  name: cartel bodysuit
+  description: A bodysuit with subtle markings indicating affiliation with the Dirizher Cartel.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/dirizherskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/dirizherskinsuit.rsi
+
+# Donk. Co Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitDonk
+  name: donk. co bodysuit
+  description: A corporate bodysuit featuring the distinctive Donk. Co branding and color scheme.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/donkcoskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/donkcoskinsuit.rsi
+
+# Hardliner Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitHardliner
+  name: hardliner bodysuit
+  description: A militaristic bodysuit designed for aggressive operations and tactical use.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/hardlinerskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/hardlinerskinsuit.rsi
+
+# Syndicate High Command Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitSyndicateHighCommand
+  name: syndicate high command bodysuit
+  description: An elite bodysuit reserved for high-ranking Syndicate commanders, featuring premium materials.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/highcommskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/highcommskinsuit.rsi
+
+# Interdyne Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitInterdyne
+  name: interdyne bodysuit
+  description: A specialized bodysuit designed for research environments with Interdyne's distinctive styling.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/interdyneskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/interdyneskinsuit.rsi
+
+# Ramzi Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitRamzi
+  name: ramzi bodysuit
+  description: A bodysuit bearing the colors and insignia of the Ramzi Clique organization.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/ramziskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/ramziskinsuit.rsi
+
+# S.E.L.F. Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitSELF
+  name: s.e.l.f. bodysuit
+  description: A bodysuit designed for the S.E.L.F. organization, featuring their distinctive styling.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/selfskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/selfskinsuit.rsi
+
+# SUNS Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitSUNS
+  name: suns bodysuit
+  description: A bodysuit featuring the SUNS organization's colors and design specifications.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/sunsskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/sunsskinsuit.rsi
+
+# Syndicate Navy Bodysuit
+- type: entity
+  parent: BodysuitBase
+  id: BodysuitSyndicateNavy
+  name: syndicate navy bodysuit
+  description: A naval-grade bodysuit designed for space operations and extended missions.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/UnderClothing/bodysuits/syndnavyskinsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/UnderClothing/bodysuits/syndnavyskinsuit.rsi
+
