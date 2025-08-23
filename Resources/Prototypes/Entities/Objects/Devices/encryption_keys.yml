@@ -275,5 +275,5 @@
     - type: Sprite
       layers:
         - state: crypt_rusted
-        - state: pirate_labell
+        - state: pirate_label
 
