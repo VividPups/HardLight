@@ -136,6 +136,18 @@ public sealed partial class AntagSelectionSystem : GameRuleSystem<AntagSelection
             ChooseAntags((uid, comp), args.Players);
             AssignPreSelectedSessions((uid, comp));
         }
+
+        // Also process delayed rules that use IntraPlayerSpawn timing
+        var queryDelayed = QueryDelayedRules();
+        while (queryDelayed.MoveNext(out var uid, out _, out var comp, out _))
+        {
+            if (comp.SelectionTime != AntagSelectionTime.IntraPlayerSpawn)
+                continue;
+
+            // Delayed rules with IntraPlayerSpawn were preselected during OnPlayerSpawning
+            // but need to be assigned here after job assignment
+            AssignPreSelectedSessions((uid, comp));
+        }
     }
 
     private void OnJobNotAssigned(NoJobsAvailableSpawningEvent args)

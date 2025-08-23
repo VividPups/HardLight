@@ -91,8 +91,9 @@ namespace Content.Server.GameTicking
         /// <returns></returns>
         public bool CanUpdateMap()
         {
-            return RunLevel == GameRunLevel.PreRoundLobby &&
-                   _roundStartTime - RoundPreloadTime > _gameTiming.CurTime;
+            // Allow map updates during the entire lobby phase, not just the early part
+            // The original constraint was too restrictive and prevented late votes from taking effect
+            return RunLevel == GameRunLevel.PreRoundLobby;
         }
 
         /// <summary>
