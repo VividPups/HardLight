@@ -157,13 +157,13 @@
     - state: mag-0
       map: ["enum.GunVisualLayers.Mag"]
       shader: unshaded
-  - type: BallisticAmmoProvider
-    capacity: 0
-  - type: Gun
-    fireRate: 1
-    selectedMode: SemiAuto
-    availableModes:
-    - SemiAuto
+    - type: BallisticAmmoProvider
+      capacity: 0
+    - type: Gun
+      fireRate: 1
+      selectedMode: SemiAuto
+      availableModes:
+      - SemiAuto
     soundGunshot: /Audio/Weapons/Guns/Gunshots/taser2.ogg
   - type: ProjectileBatteryAmmoProvider
     proto: BulletEnergyTurretDisabler # Frontier

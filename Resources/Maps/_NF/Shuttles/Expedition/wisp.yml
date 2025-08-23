@@ -2049,7 +2049,7 @@ entities:
     - type: Transform
       pos: 0.4321587,-7.5668325
       parent: 1
-- proto: LockerSalvageSpecialist
+- proto: LockerSalvageSpecialistFilledHardsuit
   entities:
   - uid: 194
     components:

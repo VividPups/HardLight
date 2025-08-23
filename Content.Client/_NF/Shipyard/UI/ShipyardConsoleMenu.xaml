@@ -1,8 +1,8 @@
 <controls:FancyWindow xmlns="https://spacestation14.io"
                            xmlns:gfx="clr-namespace:Robust.Client.Graphics;assembly=Robust.Client"
                            xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
-                           SetSize="640 500"
-                           MinSize="640 300">
+                           SetSize="900 500"
+                           MinSize="900 300">
     <BoxContainer Orientation="Vertical" Margin="5 0 5 0">
         <BoxContainer Orientation="Vertical">
             <BoxContainer Orientation="Horizontal">
@@ -46,10 +46,18 @@
                 <!-- Vessels get added here by code -->
             </BoxContainer>
         </ScrollContainer>
-        <GridContainer Columns="3" HorizontalExpand="True" Margin="0 8 0 2">
+        <GridContainer Columns="5" HorizontalExpand="True" Margin="0 8 0 2">
             <Button Name="TargetIdButton" Access="Public"/>
             <Button Name="SellShipButton"
                 Text="Sell"
+                Disabled="True"
+                StyleClasses="ButtonCaution" />
+            <Button Name="SaveShipButton"
+                Text="Save Ship (Imperfect + Saved ships can't be sold)"
+                Disabled="True"
+                StyleClasses="ButtonCaution" />
+            <Button Name="LoadShipButton"
+                Text="Load Ship"
                 Disabled="True" />
             <BoxContainer Orientation="Vertical">
                 <Label Text="{Loc 'shipyard-console-deed-label'}" />
@@ -57,5 +65,11 @@
                     Text=""/>
             </BoxContainer>
         </GridContainer>
+        <BoxContainer Orientation="Vertical" HorizontalExpand="True" Margin="0 8 0 2">
+            <Label Text="Saved Ships:" />
+            <ItemList Name="SavedShipsList" 
+                      MinSize="0 100"
+                      HorizontalExpand="True" />
+        </BoxContainer>
     </BoxContainer>
 </controls:FancyWindow>

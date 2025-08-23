@@ -1,0 +1,15 @@
+- type: construction
+  id: LockerWallBluespace
+  name: Bluespace wall locker
+  graph: LockerWallBluespace
+  startNode: start
+  targetNode: done
+  category: construction-category-storage
+  description: Wall locker infused with bluespace tech. Designed by SESWC.
+  icon: { sprite: _HL/Structures/Closets/Bluespace_wall_locker.rsi, state: icon }
+  objectType: Structure
+  placementMode: SnapgridCenter
+  canRotate: true
+  canBuildInImpassable: true
+  conditions:
+    - !type:WallmountCondition

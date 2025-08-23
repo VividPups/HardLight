@@ -243,12 +243,42 @@
   parent: MobLaserRaptor
   description: What has science Wrought?!
   components:
+    - type: LayingDown
+    - type: IdExaminable
+    - type: InventorySlots
+    - type: Stripping
+    - type: Strippable
+    - type: Cuffable
+    - type: Hands
+    - type: Access
+    - type: Tag
+      tags:
+        - CanPilot
+        - FootstepSound
+        - DoorBumpOpener
+    - type: Prying
+      pryPowered: true
+      force: true
+      speedModifier: 20 # fast because dragon strong
+      useSound:
+        path: /Audio/Items/crowbar.ogg
     - type: Sprite
       drawdepth: Mobs
       sprite: _HL/Mobs/Characters/drd.rsi
       layers:
         - map: [ "enum.DamageStateVisualLayers.Base" ]
           state: DrDino
+    - type: ComplexInteraction
+    - type: Targeting # Shitmed Change
+    - type: SurgeryTarget # Shitmed Change
+    - type: Pullable
+    - type: Puller
+    - type: AnimationPlayer
+    - type: CanEscapeInventory
+    - type: CanEnterCryostorage
+    - type: StandingState
+    - type: BodyEmotes
+      soundsId: GeneralBodyEmotes
     - type: DamageStateVisuals
       states:
         Alive:
@@ -267,6 +297,120 @@
 
 - type: entity
   name: Doctor Dinosaur
+  id: MobDrdino2
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino2
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino2
+        Dead:
+          Base: DrDino_dead
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino3
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino3
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino3
+        Dead:
+          Base: DrDino_dead
+
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino4
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino4
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino4
+        Dead:
+          Base: DrDino_dead
+
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino5
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino5
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino5
+        Dead:
+          Base: DrDino_dead
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino6
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino6
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino6
+        Dead:
+          Base: DrDino_dead 
+          
+- type: entity
+  name: Doctor Dinosaur
+  id: MobDrdino7
+  parent: MobDrdino
+  description: What has science Wrought?!
+  components:
+    - type: Sprite
+      drawdepth: Mobs
+      sprite: _HL/Mobs/Characters/drd.rsi
+      layers:
+        - map: [ "enum.DamageStateVisualLayers.Base" ]
+          state: DrDino7
+    - type: DamageStateVisuals
+      states:
+        Alive:
+          Base: DrDino7
+        Dead:
+          Base: DrDino_dead          
+          
+- type: entity
+  name: Doctor Dinosaur
   id: MobDrdino8
   parent: MobDrdino
   description: What has science Wrought?!
@@ -283,3 +427,4 @@
           Base: DrDino8
         Dead:
           Base: DrDino_dead
+
