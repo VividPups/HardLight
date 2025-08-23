@@ -24,7 +24,7 @@
 
 - type: jobIcon
   parent: JobIcon
-  if: job-name-cartel-lieutenant
+  id: job-name-cartel-lieutenant
   icon:
     sprite: /Textures/_HL/Interface/Misc/job_icons.rsi
     state: Cartel
