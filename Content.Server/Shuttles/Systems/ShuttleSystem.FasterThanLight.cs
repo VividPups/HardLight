@@ -600,6 +600,9 @@ public sealed partial class ShuttleSystem
 
             switch (comp.State)
             {
+                // Available state is a dummy state for presentation, no action needed
+                case FTLState.Available:
+                    break;
                 // Startup time has elapsed and in hyperspace.
                 case FTLState.Starting:
                     UpdateFTLStarting(entity);
