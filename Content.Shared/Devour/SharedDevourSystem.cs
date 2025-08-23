@@ -90,6 +90,7 @@ public sealed partial class DevourDoAfterEvent : SimpleDoAfterEvent { }
 [Serializable, NetSerializable]
 public enum FoodPreference : byte
 {
-    Humanoid = 0,
-    All = 1
+    None = 0,
+    Humanoid = 1,
+    All = 2
 }

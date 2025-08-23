@@ -348,4 +348,4 @@
     action: ActionDragonsBreath
     gunProto: DragonsBreathGun
   - type: Devourer
-    null
+    foodPreference: None
