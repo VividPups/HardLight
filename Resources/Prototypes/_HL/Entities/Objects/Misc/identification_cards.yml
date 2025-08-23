@@ -17,7 +17,7 @@
   components:
   - type: Sprite
     layers:
-    - state: nanotrasen-operative
+    - state: nanotrasenoperative
   - type: Access
     tags:
     - Nanotrasen
@@ -54,7 +54,7 @@
   components:
   - type: Sprite
     layers:
-    - state: cartel-lieutenant
+    - state: cartellieutenant
   - type: Access
     tags:
     - Cartel
