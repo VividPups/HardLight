@@ -9,9 +9,9 @@
   description: An elegant formal suit reserved for high-ranking Syndicate commanders. Features premium materials and distinguished styling.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Uniforms/Jumpsuit/highcommsuit.rsi
+    sprite: _HL/Clothing/Uniforms/highcommsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Uniforms/Jumpsuit/highcommsuit.rsi
+    sprite: _HL/Clothing/Uniforms/highcommsuit.rsi
 
 # Cybersun Suit
 - type: entity
@@ -21,7 +21,7 @@
   description: A sophisticated corporate suit featuring Cybersun's distinctive styling and high-quality construction.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Uniforms/Jumpsuit/cybersunsuit.rsi
+    sprite: _HL/Clothing/Uniforms/cybersunsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Uniforms/Jumpsuit/cybersunsuit.rsi
+    sprite: _HL/Clothing/Uniforms/cybersunsuit.rsi
 
