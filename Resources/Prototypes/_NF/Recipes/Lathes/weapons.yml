@@ -10,8 +10,8 @@
     Silver: 850
 
 - type: latheRecipe
-  id: WeaponRevolverArgenti
-  result: WeaponRevolverArgenti
+  id: NFWeaponRevolverArgenti
+  result: NFWeaponRevolverArgenti
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 1500
