@@ -5,9 +5,14 @@
   priority: 7
   children:
   - ShipyardBottle
-  
+  - ShipyardVerdure
+
 - type: guideEntry
   id: ShipyardBottle
   name: "JDB Bottle"
   text: "/ServerInfo/_HL/Guidebook/Shipyard/Bottle.xml"
-  
+
+- type: guideEntry
+  id: ShipyardVerdure
+  name: "JDB Verdure"
+  text: "/ServerInfo/_HL/Guidebook/Shipyard/Verdure.xml"
