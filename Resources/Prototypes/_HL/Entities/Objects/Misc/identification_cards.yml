@@ -5,7 +5,7 @@
   components:
   - type: Sprite
     layers:
-    - state: nanotrasen
+    - state: idnanotrasen
   - type: Access
     tags:
     - Nanotrasen
@@ -17,7 +17,7 @@
   components:
   - type: Sprite
     layers:
-    - state: nanotrasenoperative
+    - state: idnanotrasenoperative
   - type: Access
     tags:
     - Nanotrasen
@@ -30,7 +30,7 @@
   components:
   - type: Sprite
     layers:
-    - state: arcadia
+    - state: idarcadia
   - type: Access
     tags:
     - Arcadia
@@ -40,9 +40,9 @@
   id: CartelIDCard
   name: cartel ID card
   components:
-  - type: Sprite
+  - type: Sprite  
     layers:
-    - state: cartel
+    - state: idcartel
   - type: Access
     tags:
     - Cartel
@@ -54,7 +54,7 @@
   components:
   - type: Sprite
     layers:
-    - state: cartellieutenant
+    - state: idcartellieutenant
   - type: Access
     tags:
     - Cartel

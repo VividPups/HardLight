@@ -23,7 +23,7 @@
   description: A specialized PDA for Nanotrasen operatives.
   components:
   - type: Pda
-    id: NanotrasensOperativeIDCard
+    id: NanotrasenOperativeIDCard
   - type: Appearance
     appearanceDataInit:
      enum.PdaVisuals.PdaType:
