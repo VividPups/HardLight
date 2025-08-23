@@ -9,9 +9,9 @@
   description: A form-fitting bodysuit featuring Arcadia corporate colors and branding.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/arcadiaskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/arcadiaskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/arcadiaskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/arcadiaskinsuit.rsi
 
 # Cybersun Bodysuit
 - type: entity
@@ -21,9 +21,9 @@
   description: A sleek bodysuit with Cybersun's technological aesthetic and advanced materials.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/cybersunskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/cybersunskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/cybersunskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/cybersunskinsuit.rsi
 
 # Dirizher Cartel Bodysuit
 - type: entity
@@ -33,9 +33,9 @@
   description: A bodysuit with subtle markings indicating affiliation with the Dirizher Cartel.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/dirizherskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/dirizherskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/dirizherskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/dirizherskinsuit.rsi
 
 # Donk. Co Bodysuit
 - type: entity
@@ -45,9 +45,9 @@
   description: A corporate bodysuit featuring the distinctive Donk. Co branding and color scheme.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/donkcoskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/donkcoskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/donkcoskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/donkcoskinsuit.rsi
 
 # Hardliner Bodysuit
 - type: entity
@@ -57,9 +57,9 @@
   description: A militaristic bodysuit designed for aggressive operations and tactical use.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/hardlinerskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/hardlinerskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/hardlinerskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/hardlinerskinsuit.rsi
 
 # Syndicate High Command Bodysuit
 - type: entity
@@ -69,9 +69,9 @@
   description: An elite bodysuit reserved for high-ranking Syndicate commanders, featuring premium materials.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/highcommskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/highcommskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/highcommskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/highcommskinsuit.rsi
 
 # Interdyne Bodysuit
 - type: entity
@@ -81,9 +81,9 @@
   description: A specialized bodysuit designed for research environments with Interdyne's distinctive styling.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/interdyneskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/interdyneskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/interdyneskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/interdyneskinsuit.rsi
 
 # Ramzi Bodysuit
 - type: entity
@@ -93,9 +93,9 @@
   description: A bodysuit bearing the colors and insignia of the Ramzi Clique organization.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/ramziskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/ramziskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/ramziskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/ramziskinsuit.rsi
 
 # S.E.L.F. Bodysuit
 - type: entity
@@ -105,9 +105,9 @@
   description: A bodysuit designed for the S.E.L.F. organization, featuring their distinctive styling.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/selfskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/selfskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/selfskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/selfskinsuit.rsi
 
 # SUNS Bodysuit
 - type: entity
@@ -117,9 +117,9 @@
   description: A bodysuit featuring the SUNS organization's colors and design specifications.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/sunsskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/sunsskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/sunsskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/sunsskinsuit.rsi
 
 # Syndicate Navy Bodysuit
 - type: entity
@@ -129,7 +129,7 @@
   description: A naval-grade bodysuit designed for space operations and extended missions.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/UnderClothing/bodysuits/syndnavyskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/syndnavyskinsuit.rsi
   - type: Clothing
-    sprite: _HL/Clothing/UnderClothing/bodysuits/syndnavyskinsuit.rsi
+    sprite: _HL/Clothing/UnderClothing/syndnavyskinsuit.rsi
 

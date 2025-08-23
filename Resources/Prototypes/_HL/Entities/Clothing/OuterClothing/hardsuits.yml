@@ -193,9 +193,9 @@
   description: A hardsuit helmet designed for corporate security operations.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/arcadiaHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/arcadiaHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/arcadiaHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/arcadiaHSHelm.rsi
 
 # Cybersun Hardsuit Helmet (Enhanced radiation resistance)
 - type: entity
@@ -205,9 +205,9 @@
   description: A hardsuit helmet with enhanced radiation shielding for hazardous environments.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/cybersunHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/cybersunHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/cybersunHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/cybersunHSHelm.rsi
   - type: Armor
     modifiers:
       coefficients:
@@ -226,9 +226,9 @@
   description: A hardsuit helmet with all identifying markings removed.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/dirizherHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/dirizherHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/dirizherHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/dirizherHSHelm.rsi
 
 # Donk. Co Hardsuit Helmet
 - type: entity
@@ -238,9 +238,9 @@
   description: A hardsuit helmet manufactured by Donk. Co for corporate use.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/donkcoHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/donkcoHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/donkcoHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/donkcoHSHelm.rsi
 
 # Hardliner Hardsuit Helmet
 - type: entity
@@ -250,9 +250,9 @@
   description: A hardsuit helmet designed for combat operations.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/hardlinerHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/hardlinerHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/hardlinerHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/hardlinerHSHelm.rsi
 
 # Syndicate High Command Hardsuit Helmet (25% better armor)
 - type: entity
@@ -262,9 +262,9 @@
   description: An elite hardsuit helmet reserved for high-ranking Syndicate commanders.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/highcommHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/highcommHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/highcommHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/highcommHSHelm.rsi
   - type: Armor
     modifiers:
       coefficients:
@@ -283,9 +283,9 @@
   description: A hardsuit helmet with advanced biological protection systems.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/interdyneHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/interdyneHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/interdyneHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/interdyneHSHelm.rsi
   - type: Armor
     modifiers:
       coefficients:
@@ -304,9 +304,9 @@
   description: A hardsuit helmet manufactured by the Ramzi Clique organization.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/ramziHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/ramziHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/ramziHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/ramziHSHelm.rsi
 
 # S.E.L.F. Hardsuit Helmet
 - type: entity
@@ -316,9 +316,9 @@
   description: A hardsuit helmet manufactured by the S.E.L.F. organization.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/selfHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/selfHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/selfHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/selfHSHelm.rsi
 
 # SUNS Hardsuit Helmet
 - type: entity
@@ -328,9 +328,9 @@
   description: A hardsuit helmet manufactured by the SUNS organization.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/sunsHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/sunsHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/sunsHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/sunsHSHelm.rsi
 
 # Syndicate Navy Hardsuit Helmet
 - type: entity
@@ -340,6 +340,6 @@
   description: A hardsuit helmet designed for space operations and boarding actions.
   components:
   - type: Sprite
-    sprite: _HL/Clothing/Head/Hardsuits/syndnavyHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/syndnavyHSHelm.rsi
   - type: Clothing
-    sprite: _HL/Clothing/Head/Hardsuits/syndnavyHS.rsi
+    sprite: _HL/Clothing/OuterClothing/Hardsuits/syndnavyHSHelm.rsi
