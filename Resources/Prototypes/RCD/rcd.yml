@@ -273,3 +273,19 @@
   collisionMask: Impassable
   rotation: User
   fx: EffectRCDConstruct0
+
+
+# HARD LIGHT
+
+# AIRLOCKs
+- type: rcd
+  id: AtmosDeviceFanDirectional
+  category: Airlocks
+  sprite: /Textures/Structures/Piping/Atmospherics/directionalfan.rsi/icon.png
+  mode: ConstructObject
+  prototype: AtmosDeviceFanDirectional
+  cost: 10
+  delay: 5
+  collisionMask: FullTileMask
+  rotation: User
+  fx: EffectRCDConstruct3

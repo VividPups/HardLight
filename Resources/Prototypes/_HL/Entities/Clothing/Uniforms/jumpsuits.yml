@@ -1,0 +1,27 @@
+# Faction Uniforms
+# Inherit from Syndicate formal suit (ClothingUniformJumpsuitSyndieFormal)
+
+# Syndicate High Command Suit
+- type: entity
+  parent: [ClothingUniformJumpsuitSyndieFormal, BaseC3SyndicateContraband, ContrabandClothing]
+  id: ClothingUniformJumpsuitSyndicateHighCommand
+  name: syndicate high command suit
+  description: An elegant formal suit reserved for high-ranking Syndicate commanders. Features premium materials and distinguished styling.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/highcommsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/highcommsuit.rsi
+
+# Cybersun Suit
+- type: entity
+  parent: [ClothingUniformJumpsuitSyndieFormal, BaseC3SyndicateContraband, ContrabandClothing]
+  id: ClothingUniformJumpsuitCybersun
+  name: cybersun suit
+  description: A sophisticated corporate suit featuring Cybersun's distinctive styling and high-quality construction.
+  components:
+  - type: Sprite
+    sprite: _HL/Clothing/Uniforms/cybersunsuit.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Uniforms/cybersunsuit.rsi
+

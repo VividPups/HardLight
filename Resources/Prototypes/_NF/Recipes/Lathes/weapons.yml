@@ -1,4 +1,5 @@
 # region Ranged weapons
+# HL changes
 - type: latheRecipe
   id: NFWeaponEnergyPistolLaser
   result: NFWeaponEnergyPistolLaser
@@ -17,8 +18,8 @@
     Plasteel: 500
 
 - type: latheRecipe
-  id: NFWeaponPistolMk58
-  result: NFWeaponPistolMk58
+  id: WeaponPistolMk58
+  result: WeaponPistolMk58
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 1000
@@ -26,8 +27,8 @@
     Plastic: 1500
 
 - type: latheRecipe
-  id: NFWeaponShotgunDoubleBarreled
-  result: NFWeaponShotgunDoubleBarreled
+  id: WeaponShotgunDoubleBarreled
+  result: WeaponShotgunDoubleBarreled
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 2000
@@ -35,8 +36,8 @@
     Wood: 1000
 
 - type: latheRecipe
-  id: NFWeaponShotgunKammerer
-  result: NFWeaponShotgunKammerer
+  id: WeaponShotgunKammerer
+  result: WeaponShotgunKammerer
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 500
@@ -45,8 +46,8 @@
     Plastic: 500
 
 - type: latheRecipe
-  id: NFWeaponRifleAssaultNovaliteC1
-  result: NFWeaponRifleAssaultNovaliteC1
+  id: WeaponRifleNovaliteC1
+  result: WeaponRifleNovaliteC1
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 2500
@@ -54,8 +55,8 @@
     Plastic: 1500
 
 - type: latheRecipe
-  id: NFWeaponRifleAssaultGestio
-  result: NFWeaponRifleAssaultGestio
+  id: WeaponRifleGestio
+  result: WeaponRifleGestio
   parent: BaseWeaponRecipeLong
   materials:
     Steel: 2500

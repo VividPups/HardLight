@@ -1,0 +1,11 @@
+#- type: rcd
+#  id: AtmosDeviceFanDirectional
+#  category: Airlocks
+#  sprite: Structures/Piping/Atmospherics/directionalfan.rsi
+#  mode: ConstructObject
+#  prototype: AtmosDeviceFanDirectional
+#  cost: 10
+#  delay: 5
+#  collisionMask: FullTileMask
+#  rotation: Camera
+#  fx: EffectRCDConstruct3

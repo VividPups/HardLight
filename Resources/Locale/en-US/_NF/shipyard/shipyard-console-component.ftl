@@ -79,3 +79,7 @@ shipyard-console-engine-Welding = Welding Fuel
 shipyard-console-engine-Plasma = Plasma
 shipyard-console-engine-Uranium = Uranium
 shipyard-console-engine-Bananium = Bananium
+
+## Error Messages
+shipyard-console-checksum-failure = WARNING: Vessel manifest corrupted! Loading aborted. Contact Colonial Command immediately.
+shipyard-console-load-ship-no-id = Insert an ID card to load saved ships.

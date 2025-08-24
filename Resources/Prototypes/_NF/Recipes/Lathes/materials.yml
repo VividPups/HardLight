@@ -26,3 +26,14 @@
     state: scrapore
   materials:
     RawScrap: 2000
+
+- type: latheRecipe
+  id: SmeltScrapTech
+  result: SpawnRandomRefinedTech
+  parent: BaseMaterialsNoDiscountRecipe
+  completetime: 5.0
+  icon:
+    sprite: _NF/Objects/Materials/ore.rsi
+    state: scrapore
+  materials:
+    RawScrap: 18000

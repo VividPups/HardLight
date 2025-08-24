@@ -64,3 +64,100 @@
   - type: Clothing
     sprite: Clothing/Ears/Headsets/science.rsi
 
+
+- type: entity
+  parent: [ClothingHeadset, BaseC3SyndicateContraband, ContrabandClothing]
+  id: ClothingHeadsetCartel
+  name: cartel headset
+  description: A headset used by cartel operatives for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyCartel
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/cartel.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/cartel.rsi
+
+- type: entity
+  parent: [ClothingHeadset, RecyclableItemClothDevice]
+  id: ClothingHeadsetArcadia
+  name: arcadia headset
+  description: A headset used by Arcadia operatives for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyArcadia
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/arcadia.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/arcadia.rsi
+
+- type: entity
+  parent: [ClothingHeadset, RecyclableItemClothDevice]
+  id: ClothingHeadsetNanotrasen
+  name: nanotrasen headset
+  description: A headset used by Nanotrasen corporate personnel for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyNanotrasen
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/nanotrasen.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/nanotrasen.rsi
+
+- type: entity
+  parent: [ClothingHeadsetAlt, BaseC3SyndicateContraband, ContrabandClothing]
+  id: ClothingHeadsetAltCartel
+  name: cartel over-ear headset
+  description: An over-ear headset used by cartel operatives for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyCartel
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/cartel.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/cartel.rsi
+
+- type: entity
+  parent: ClothingHeadsetAlt
+  id: ClothingHeadsetAltArcadia
+  name: arcadia over-ear headset
+  description: An over-ear headset used by Arcadia operatives for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyArcadia
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/arcadia.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/arcadia.rsi
+
+- type: entity
+  parent: ClothingHeadsetAlt
+  id: ClothingHeadsetAltNanotrasen
+  name: nanotrasen over-ear headset
+  description: An over-ear headset used by Nanotrasen corporate personnel for secure communications.
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyNanotrasen
+      - EncryptionKeyCommon
+  - type: Sprite
+    sprite: _HL/Clothing/Ears/Headsets/nanotrasen.rsi
+  - type: Clothing
+    sprite: _HL/Clothing/Ears/Headsets/nanotrasen.rsi
+

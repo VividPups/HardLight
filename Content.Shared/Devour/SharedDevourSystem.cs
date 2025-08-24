@@ -46,6 +46,10 @@ public abstract class SharedDevourSystem : EntitySystem
         if (args.Handled || _whitelistSystem.IsWhitelistFailOrNull(component.Whitelist, args.Target))
             return;
 
+        // Don't devour mobs if preference is None
+        if (component.FoodPreference == FoodPreference.None && TryComp(args.Target, out MobStateComponent? _))
+            return;
+
         args.Handled = true;
         var target = args.Target;
 
@@ -90,6 +94,7 @@ public sealed partial class DevourDoAfterEvent : SimpleDoAfterEvent { }
 [Serializable, NetSerializable]
 public enum FoodPreference : byte
 {
-    Humanoid = 0,
-    All = 1
+    None = 0,
+    Humanoid = 1,
+    All = 2
 }

@@ -1,0 +1,44 @@
+# Author Info
+# GitHub: trylobytewastaken
+# Discord: Trylobyte
+
+# Maintainer Info
+# GitHub: trylobytewastaken
+# Discord: Trylobyte
+
+# Shuttle Notes:
+# hi
+- type: vessel
+  id: Verdure
+  parent: BaseVessel
+  name: JDB Verdure
+  description: An old torpedo bomber repurposed into the ultimate Botany vessel.  There's little you can't do with plants on the Verdure.
+  price: 60000
+  category: Medium
+  group: Shipyard
+  shuttlePath: /Maps/_HL/Shuttles/verdure.yml
+  guidebookPage: ShipyardVerdure
+  class:
+  - Botany
+  engine:
+  - Uranium
+
+- type: gameMap
+  id: Verdure
+  mapName: 'Verdure'
+  mapPath: /Maps/_HL/Shuttles/verdure.yml
+  minPlayers: 0
+  stations:
+    Verdure:
+      stationProto: StandardFrontierVessel
+      components:
+        - type: StationNameSetup
+          mapNameTemplate: 'Verdure {1}'
+          nameGenerator:
+            !type:NanotrasenNameGenerator
+            prefixCreator: '14'
+        - type: StationJobs
+          availableJobs:
+            ContractorInterview: [ 0, 0 ]
+            PilotInterview: [ 0, 0 ]
+            MercenaryInterview: [ 0, 0 ]

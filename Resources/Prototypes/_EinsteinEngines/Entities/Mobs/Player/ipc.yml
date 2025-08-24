@@ -1,4 +1,4 @@
-- type: entity
+- type: entity #
   id: MobIPC
   parent: PlayerSiliconHumanoidBase
   name: Urist McPositronic
@@ -91,6 +91,11 @@
     examineWhileLocked: false
     keysExtractionMethod: Cutting
     keysUnlocked: false
+  - type: ContainerFill #Hardlight change
+    containers:
+      key_slots:
+      - EncryptionKeyCommon
+
   - type: ActiveRadio
   - type: IntrinsicRadioReceiver
   - type: IntrinsicRadioTransmitter

@@ -340,6 +340,8 @@
     - HVCable
     - CableTerminal
     - Deconstruct
+    #Hardlight
+    - AtmosDeviceFanDirectional
   - type: LimitedCharges
     maxCharges: 30
   - type: Sprite
