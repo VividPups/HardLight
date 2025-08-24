@@ -1,0 +1,19 @@
+- type: accessLevel
+  id: Nanotrasen
+  name: id-card-access-level-nanotrasen
+
+- type: accessLevel
+  id: NanotrasenOperative
+  name: id-card-access-level-nanotrasen-operative
+
+- type: accessLevel
+  id: Arcadia
+  name: id-card-access-level-arcadia
+
+- type: accessLevel
+  id: Cartel
+  name: id-card-access-level-cartel
+
+- type: accessLevel
+  id: CartelLieutenant
+  name: id-card-access-level-cartel-lieutenant

@@ -74,7 +74,7 @@
     NFWeaponRevolverArgenti: 4294967295
     NFWeaponRevolverFitz: 4294967295
     WeaponSniperRepeater: 4294967295
-    NFWeaponShotgunDoubleBarreled: 4294967295
+    #NFWeaponShotgunDoubleBarreled: 4294967295 replaced for weaponshotgundoublebarreled
     WeaponBrassKnuckles: 4294967295
     WeaponRifleGestio: 4294967295
     WeaponRifleNovaliteC1: 4294967295

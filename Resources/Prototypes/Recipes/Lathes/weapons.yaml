@@ -1,0 +1,30 @@
+ # - WeaponShotgunDoubleBarreled
+  # - WeaponRifleNovaliteC1
+  # - WeaponRifleGestio
+
+- type: latheRecipe
+  id: WeaponShotgunDoubleBarreled
+  result: WeaponShotgunDoubleBarreled
+  parent: BaseWeaponRecipeLong
+  materials:
+    Steel: 1200
+    Plastic: 800
+    Wood: 100
+
+    - type: latheRecipe
+  id: WeaponRifleGestio
+  result: WeaponRifleGestio
+  parent: BaseWeaponRecipeLong
+  materials:
+    Steel: 2500
+    Plasteel: 1200
+    Plastic: 1500
+
+- type: latheRecipe
+  id: WeaponRifleNovaliteC1
+  result: WeaponRifleNovaliteC1
+  parent: BaseWeaponRecipeLong
+  materials:
+    Steel: 2500
+    Plasteel: 1200
+    Plastic: 1500

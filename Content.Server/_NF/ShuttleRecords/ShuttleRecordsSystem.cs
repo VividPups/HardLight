@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Content.Server._NF.SectorServices;
 using Content.Server._NF.ShuttleRecords.Components;
 using Content.Server.Administration.Logs;
@@ -71,6 +72,51 @@ public sealed partial class ShuttleRecordsSystem : SharedShuttleRecordsSystem
 
         record = component.ShuttleRecords[uid];
         return true;
+    }
+
+    /**
+     * Gets all shuttle records.
+     * <returns>List of all shuttle records.</returns>
+     */
+    public List<ShuttleRecord> GetAllShuttleRecords()
+    {
+        if (!TryGetShuttleRecordsDataComponent(out var component))
+            return new List<ShuttleRecord>();
+
+        return component.ShuttleRecords.Values.ToList();
+    }
+
+    /**
+     * Restores shuttle records from a list (used by persistence system).
+     * <param name="records">The records to restore.</param>
+     */
+    public void RestoreShuttleRecords(List<ShuttleRecord> records)
+    {
+        if (!TryGetShuttleRecordsDataComponent(out var component))
+            return;
+
+        // Clear existing records
+        component.ShuttleRecords.Clear();
+
+        // Add all restored records
+        foreach (var record in records)
+        {
+            component.ShuttleRecords[record.EntityUid] = record;
+        }
+
+        RefreshStateForAll();
+    }
+
+    /**
+     * Clears all shuttle records (used for testing or maintenance).
+     */
+    public void ClearAllRecords()
+    {
+        if (!TryGetShuttleRecordsDataComponent(out var component))
+            return;
+
+        component.ShuttleRecords.Clear();
+        RefreshStateForAll();
     }
 
     private bool TryGetShuttleRecordsDataComponent([NotNullWhen(true)] out SectorShuttleRecordsComponent? component)

@@ -11,6 +11,7 @@ using Robust.Shared.CPUJob.JobQueues;
 using Robust.Shared.CPUJob.JobQueues.Queues;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components; // For MapGridComponent
 using Content.Server._NF.Salvage.Expeditions; // Frontier
 using Content.Server.Station.Components; // Frontier
 using Content.Shared.Procedural; // Frontier
@@ -50,6 +51,7 @@ public sealed partial class SalvageSystem
         SubscribeLocalEvent<SalvageExpeditionConsoleComponent, EntParentChangedMessage>(OnSalvageConsoleParent);
         SubscribeLocalEvent<SalvageExpeditionConsoleComponent, ClaimSalvageMessage>(OnSalvageClaimMessage);
         SubscribeLocalEvent<SalvageExpeditionDataComponent, ExpeditionSpawnCompleteEvent>(OnExpeditionSpawnComplete); // Frontier: more gracefully handle expedition generation failures
+        SubscribeLocalEvent<SalvageExpeditionConsoleComponent, ExpeditionSpawnCompleteEvent>(OnExpeditionSpawnCompleteConsole); // HARDLIGHT: Handle event on consoles for round persistence
         SubscribeLocalEvent<SalvageExpeditionConsoleComponent, FinishSalvageMessage>(OnSalvageFinishMessage); // Frontier: For early finish
 
         SubscribeLocalEvent<SalvageExpeditionComponent, MapInitEvent>(OnExpeditionMapInit);
@@ -129,13 +131,24 @@ public sealed partial class SalvageSystem
             }
         }
 
+        // HARDLIGHT: Handle round persistence - station might be deleted during round transitions
         if (Deleted(component.Station))
+        {
+            Log.Info($"Expedition shutdown: Station {component.Station} was deleted (likely during round persistence)");
             return;
+        }
 
-        // Finish mission
+        // Finish mission - but handle the case where expedition data might be on a different entity
+        // due to round persistence transferring data between entities
         if (TryComp<SalvageExpeditionDataComponent>(component.Station, out var data))
         {
             FinishExpedition((component.Station, data), component, uid); // Frontier: add component
+        }
+        else
+        {
+            // HARDLIGHT: For round persistence, expedition data might have been moved to a console's LocalExpeditionData
+            // This is a graceful fallback for when station entities are recreated
+            Log.Info($"Expedition shutdown: No expedition data found on station {component.Station}, expedition likely handled by local console data");
         }
     }
 
@@ -162,8 +175,22 @@ public sealed partial class SalvageSystem
                 continue;
 
             // Frontier: disable cooldown when still in FTL
-            if (!TryComp<StationDataComponent>(uid, out var stationData)
-                || !HasComp<FTLComponent>(_station.GetLargestGrid(stationData)))
+            // HARDLIGHT: Modified for round persistence - work with or without StationDataComponent
+            EntityUid? largestGrid = null;
+
+            if (TryComp<StationDataComponent>(uid, out var stationData))
+            {
+                // Normal case: station has StationDataComponent
+                largestGrid = _station.GetLargestGrid(stationData);
+            }
+            else if (HasComp<MapGridComponent>(uid))
+            {
+                // Round persistence case: uid might be a grid itself (shuttle serving as station)
+                largestGrid = uid;
+            }
+
+            // Check if the grid (whether from station or direct grid) has FTL component
+            if (largestGrid == null || !HasComp<FTLComponent>(largestGrid.Value))
             {
                 comp.Cooldown = false;
             }
@@ -238,13 +265,19 @@ public sealed partial class SalvageSystem
         // End Frontier: generate missions from an arbitrary set of difficulties
     }
 
+    // HARDLIGHT: Public method for round persistence system to properly regenerate missions
+    public void ForceGenerateMissions(SalvageExpeditionDataComponent component)
+    {
+        GenerateMissions(component);
+    }
+
     private SalvageExpeditionConsoleState GetState(SalvageExpeditionDataComponent component)
     {
         var missions = component.Missions.Values.ToList();
         return new SalvageExpeditionConsoleState(component.NextOffer, component.Claimed, component.Cooldown, component.ActiveMission, missions, component.CanFinish, component.CooldownTime); // Frontier: add CanFinish, CooldownTime
     }
 
-    private void SpawnMission(SalvageMissionParams missionParams, EntityUid station, EntityUid? coordinatesDisk)
+    private void SpawnMission(SalvageMissionParams missionParams, EntityUid station, EntityUid? console, EntityUid? coordinatesDisk)
     {
         var cancelToken = new CancellationTokenSource();
         var job = new SpawnSalvageMissionJob(
@@ -262,6 +295,7 @@ public sealed partial class SalvageSystem
             _shuttle, // Frontier
             this, // Frontier
             station,
+            console,
             coordinatesDisk,
             missionParams,
             cancelToken.Token);
@@ -279,11 +313,40 @@ public sealed partial class SalvageSystem
     // Handle exped spawn job failures gracefully - reset the console
     private void OnExpeditionSpawnComplete(EntityUid uid, SalvageExpeditionDataComponent component, ExpeditionSpawnCompleteEvent ev)
     {
+        // HARDLIGHT: Enhanced handling for round persistence
         if (component.ActiveMission == ev.MissionIndex && !ev.Success)
         {
             component.ActiveMission = 0;
             component.Cooldown = false;
             UpdateConsoles((uid, component));
+
+            Log.Info($"Expedition mission {ev.MissionIndex} failed for entity {uid}, reset console state");
+        }
+        else if (component.ActiveMission == ev.MissionIndex && ev.Success)
+        {
+            Log.Debug($"Expedition mission {ev.MissionIndex} completed successfully for entity {uid}");
+        }
+    }
+
+    // HARDLIGHT: Also handle the event on expedition consoles for round persistence
+    private void OnExpeditionSpawnCompleteConsole(EntityUid uid, SalvageExpeditionConsoleComponent component, ExpeditionSpawnCompleteEvent ev)
+    {
+        // Handle expedition completion events sent to consoles when station entities don't exist
+        if (component.LocalExpeditionData != null &&
+            component.LocalExpeditionData.ActiveMission == ev.MissionIndex &&
+            !ev.Success)
+        {
+            component.LocalExpeditionData.ActiveMission = 0;
+            component.LocalExpeditionData.Cooldown = false;
+
+            // Update the console UI
+            if (TryComp<UserInterfaceComponent>(uid, out var uiComp))
+            {
+                var state = GetState(component.LocalExpeditionData);
+                _ui.SetUiState((uid, uiComp), SalvageConsoleUiKey.Expedition, state);
+            }
+
+            Log.Info($"Expedition console {uid} handled failed mission {ev.MissionIndex} via LocalExpeditionData");
         }
     }
 

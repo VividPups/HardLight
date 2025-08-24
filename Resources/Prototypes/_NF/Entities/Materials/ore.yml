@@ -98,3 +98,30 @@
     - SpawnDungeonLootPartsEngi
     - SpawnDungeonLootCircuitBoard
     rareChance: 0.005
+
+# Spawner for lathe:  Yield random tech disk if processed in scrap processor
+# Why are you touching shit you don't understand Trylobyte
+- type: entity
+  name: refined tech
+  id: SpawnRandomRefinedTech
+  parent: MarkerBasePlaceFree
+#  categories: [ HideSpawnMenu ]
+  components:
+  - type: Sprite
+    layers:
+      - state: green
+      - sprite: _NF/Objects/Materials/ore.rsi
+        state: scrapore
+      - sprite: _NF/Markers/general.rsi
+        state: questionmark
+        color: blue
+  - type: RandomSpawner
+    prototypes:
+    - ResearchDisk
+    - ResearchDisk5000
+    - ResearchDisk10000
+    chance: 1.0
+    offset: 0.0
+    rarePrototypes:
+    - ResearchDisk10000
+    rareChance: 0.05

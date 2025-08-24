@@ -1,0 +1,31 @@
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconNanotrasen
+  icon:
+    sprite: /Textures/_HL/Interface/Misc/job_icons.rsi
+    state: Nanotrasen
+  jobName: job-name-nanotrasen
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconArcadia
+  icon:
+    sprite: /Textures/_HL/Interface/Misc/job_icons.rsi
+    state: Arcadia
+  jobName: job-name-arcadia
+
+- type: jobIcon
+  parent: JobIcon
+  id: JobIconCartel
+  icon:
+    sprite: /Textures/_HL/Interface/Misc/job_icons.rsi
+    state: Cartel
+  jobName: job-name-cartel
+
+- type: jobIcon
+  parent: JobIcon
+  id: job-name-cartel-lieutenant
+  icon:
+    sprite: /Textures/_HL/Interface/Misc/job_icons.rsi
+    state: Cartel
+  jobName: job-name-cartel-lieutenant 

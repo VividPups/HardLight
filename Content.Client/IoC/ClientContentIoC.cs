@@ -26,6 +26,7 @@ using Content.Shared.Chat;
 using Content.Shared.Players.PlayTimeTracking;
 using Content.Shared.Players.RateLimiting;
 using Content.Client._FS.DiscordAuth; // Floofstation
+using Content.Client.Shuttles.Save;
 
 namespace Content.Client.IoC
 {
@@ -63,6 +64,7 @@ namespace Content.Client.IoC
             collection.Register<SharedPlayerRateLimitManager, PlayerRateLimitManager>();
             collection.Register<TitleWindowManager>();
             IoCManager.Register<DiscordAuthManager>(); // Floofstation
+            collection.Register<ShipFileManagementSystem>();
         }
     }
 }

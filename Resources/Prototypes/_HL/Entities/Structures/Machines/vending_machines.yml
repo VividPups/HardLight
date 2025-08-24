@@ -1,0 +1,47 @@
+- type: entity
+  parent: [BaseStructureDisableAnchoring, StorePresetSecurityUplink, VendingMachine]
+  id: VendingMachineSecurityVend1
+  name: SecurityVend
+  description: Desgin by SESWC to help every officers day
+  components:
+  - type: VendingMachine
+    cashSlot: Null
+    offState: off
+    brokenState: broken
+    normalState: normal-unshaded
+    ejectState: eject-unshaded
+    denyState: deny-unshaded
+#   screenState: screen
+  - type: Sprite
+    sprite: _NF/Structures/Machines/VendingMachines/mercvend.rsi
+    layers:
+    - state: "off"
+      map: ["enum.VendingMachineVisualLayers.Base"]
+    - state: "off"
+      map: ["enum.VendingMachineVisualLayers.BaseUnshaded"]
+      shader: unshaded
+#   - state: "screen"
+#     map: ["enum.VendingMachineVisualLayers.Screen"]
+#     shader: unshaded
+    - state: panel
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: PointLight
+    radius: 1.5
+    energy: 1.3
+    color: "#0492c2"
+  - type: UserInterface
+    interfaces:
+      enum.StoreUiKey.Key:
+        type: StoreBoundUserInterface
+  - type: ActivatableUI
+    key: enum.StoreUiKey.Key
+  - type: Tag
+    tags:
+    - SecurityUplink
+    - SecurityVend
+#  - type: Store
+#    balance:
+#      MercCoin: 0 # Waits for the player to put in money
+  - type: AccessReader
+    access: [["Security"]]
+  - type: ActivatableUIRequiresAccess

@@ -63,7 +63,9 @@ public abstract partial class SharedInterviewHologramSystem : EntitySystem
         return IdCardSystem.TryFindIdCard(uid, out var idCard)
             && TryComp(idCard, out ShuttleDeedComponent? shuttleDeed)
             && TryComp(target, out TransformComponent? targetXform)
-            && shuttleDeed.ShuttleUid == targetXform.GridUid;
+            && shuttleDeed.ShuttleUid != null
+            && TryGetEntity(shuttleDeed.ShuttleUid.Value, out var shuttleEntity)
+            && shuttleEntity == targetXform.GridUid;
     }
 
     private void OnToggleApplicantApproval(Entity<InterviewHologramComponent> ent, ref ToggleApplicantApprovalEvent ev)

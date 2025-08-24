@@ -153,7 +153,11 @@ public sealed class RCDSystem : EntitySystem
         }
 
         // Swiping it again removes the authorization on it.
-        if (rcdComponent.LinkedShuttleUid == shuttleDeedComponent.ShuttleUid)
+        EntityUid? deedEntity = null;
+        if (shuttleDeedComponent.ShuttleUid != null)
+            TryGetEntity(shuttleDeedComponent.ShuttleUid.Value, out deedEntity);
+
+        if (rcdComponent.LinkedShuttleUid == deedEntity)
         {
             _popup.PopupClient(Loc.GetString("rcd-component-id-card-removed"),
                 uid, args.User, PopupType.Medium);
@@ -165,7 +169,7 @@ public sealed class RCDSystem : EntitySystem
             _popup.PopupClient(Loc.GetString("rcd-component-id-card-accepted"),
                 uid, args.User, PopupType.Medium);
             _audio.PlayLocal(comp.InsertSound, rcdEntityUid, args.User);
-            rcdComponent.LinkedShuttleUid = shuttleDeedComponent.ShuttleUid;
+            rcdComponent.LinkedShuttleUid = deedEntity;
         }
 
         Dirty(rcdEntityUid, rcdComponent);
@@ -304,7 +308,13 @@ public sealed class RCDSystem : EntitySystem
                 _popup.PopupClient(Loc.GetString("rcd-component-no-id-swiped"), uid, args.User);
                 return false;
             }
-            if (comp.LinkedShuttleUid != gridUid)
+            NetEntity? netGrid = EntityManager.GetNetEntity(gridUid);
+            if (netGrid == null)
+            {
+                _popup.PopupClient(Loc.GetString("rcd-component-can-only-build-authorized-ship"), uid, args.User);
+                return false;
+            }
+            if (!TryGetEntity(netGrid.Value, out var gridEntity) || comp.LinkedShuttleUid != gridEntity)
             {
                 _popup.PopupClient(Loc.GetString("rcd-component-can-only-build-authorized-ship"), uid, args.User);
                 return false;

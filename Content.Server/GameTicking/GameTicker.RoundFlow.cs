@@ -91,8 +91,9 @@ namespace Content.Server.GameTicking
         /// <returns></returns>
         public bool CanUpdateMap()
         {
-            return RunLevel == GameRunLevel.PreRoundLobby &&
-                   _roundStartTime - RoundPreloadTime > _gameTiming.CurTime;
+            // Allow map updates during the entire lobby phase, not just the early part
+            // The original constraint was too restrictive and prevented late votes from taking effect
+            return RunLevel == GameRunLevel.PreRoundLobby;
         }
 
         /// <summary>
@@ -804,6 +805,13 @@ namespace Content.Server.GameTicking
             // Round restart cleanup event, so entity systems can reset.
             var ev = new RoundRestartCleanupEvent();
             RaiseLocalEvent(ev);
+
+            // Delete all stations at round cleanup
+            var stationSystem = EntitySystem.Get<Content.Server.Station.Systems.StationSystem>();
+            foreach (var station in EntityManager.EntityQuery<Content.Server.Station.Components.StationDataComponent>())
+            {
+                stationSystem.DeleteStation(station.Owner, station);
+            }
 
             // So clients' entity systems can clean up too...
             // RaiseNetworkEvent(ev);
