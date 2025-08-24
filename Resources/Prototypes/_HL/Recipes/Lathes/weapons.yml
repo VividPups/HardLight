@@ -11,7 +11,7 @@
     Plastic: 800
     Wood: 100
 
-    - type: latheRecipe
+- type: latheRecipe
   id: WeaponRifleGestio
   result: WeaponRifleGestio
   parent: BaseWeaponRecipeLong

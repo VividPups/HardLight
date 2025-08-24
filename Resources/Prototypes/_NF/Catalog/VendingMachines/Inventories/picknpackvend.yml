@@ -3,19 +3,21 @@
   startingInventory:
   # Weapons
     NFWeaponPistolMk58: 6
+    #Hardlight start
     WeaponPistolPollock: 6
     WeaponRifleNovaliteC1: 6
     WeaponRifleGestio: 6
     WeaponShotgunKammerer: 6
+    #Hardlight end
   # Magazines
     NFMagazinePistol35Empty: 6
     NFMagazineLowCapacityRifle30Empty: 6
     NFMagazineClipRifle20Empty: 6
   # Ammo boxes
     NFAmmunitionBoxPistol35: 6
-    AmmoBox5.56x45mmBigFMJ: 6
+    AmmoBox5.56x45mmBigFMJ: 6  # Hardlight change
     NFAmmunitionBoxRifle30: 6
-    AmmoBox12_gaugeBuckshot: 6
+    AmmoBox12_gaugeBuckshot: 6 # Hardlight change
     NFAmmunitionBoxShellShotgunBeanbag: 6
   emaggedInventory:
 
@@ -24,6 +26,7 @@
   startingInventory:
   # Weapons
     NFWeaponPistolMk58: 4294967295
+    # Hardlight start
     WeaponPistolPollock: 4294967295
     WeaponRifleNovaliteC1: 4294967295
     WeaponRifleGestio: 4294967295
@@ -32,6 +35,7 @@
     Magazine9x19mmPistolFMJ: 4294967295
     MagazineNovaliteC1: 4294967295
     Magazine7.62x39mmLowCapacityFMJ: 4294967295
+  # Hardlight end
   # Ammo boxes
     AmmoBox9x19mmBigFMJ: 4294967295
     AmmoBox5.56x45mmBigFMJ: 4294967295
