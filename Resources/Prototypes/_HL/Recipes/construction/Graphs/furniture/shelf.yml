@@ -9,6 +9,9 @@
       - material: Plasteel
         amount: 30
         doAfter: 5
+      - material: Bluespace
+        amount: 5
+        doAfter: 5
   - node: done
     entity: LockerWallBluespace
     edges:
@@ -21,7 +24,10 @@
         welded: false
       completed:
       - !type:SpawnPrototype
-        prototype: SheetSteel1
-        amount: 4
+        prototype: SheetPlasteel
+        amount: 10
+      - !type:SpawnPrototype
+        prototype: MaterialBluespace
+        amount: 5
       - !type:EmptyAllContainers
       - !type:DeleteEntity
