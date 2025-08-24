@@ -2,14 +2,14 @@
   # - WeaponRifleNovaliteC1
   # - WeaponRifleGestio
 
-- type: latheRecipe
-  id: WeaponShotgunDoubleBarreled
-  result: WeaponShotgunDoubleBarreled
-  parent: BaseWeaponRecipeLong
-  materials:
-    Steel: 1200
-    Plastic: 800
-    Wood: 100
+#- type: latheRecipe
+#  id: WeaponShotgunDoubleBarreled
+#  result: WeaponShotgunDoubleBarreled
+#  parent: BaseWeaponRecipeLong
+#  materials:
+#    Steel: 1200
+#    Plastic: 800
+#    Wood: 100
 
 - type: latheRecipe
   id: WeaponRifleGestio
