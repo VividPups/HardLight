@@ -57,6 +57,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
     private readonly SalvageSystem _salvage; // Frontier
 
     public readonly EntityUid Station;
+    public readonly EntityUid? Console; // HARDLIGHT: Console that initiated this mission
     public readonly EntityUid? CoordinatesDisk;
     private readonly SalvageMissionParams _missionParams;
 
@@ -84,6 +85,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         ShuttleSystem shuttleSystem, // Frontier
         SalvageSystem salvageSystem, // Frontier
         EntityUid station,
+        EntityUid? console, // HARDLIGHT: Console that initiated this mission
         EntityUid? coordinatesDisk,
         SalvageMissionParams missionParams,
         CancellationToken cancellation = default) : base(maxTime, cancellation)
@@ -100,6 +102,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         _shuttle = shuttleSystem; // Frontier
         _salvage = salvageSystem; // Frontier
         Station = station;
+        Console = console; // HARDLIGHT: Store console reference
         CoordinatesDisk = coordinatesDisk;
         _missionParams = missionParams;
         _sawmill = logManager.GetSawmill("salvage_job");
@@ -119,10 +122,33 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         }
         finally
         {
+            // HARDLIGHT: Enhanced event handling for round persistence
             ExpeditionSpawnCompleteEvent ev = new(Station, success, _missionParams.Index);
-            _entManager.EventBus.RaiseLocalEvent(Station, ev);
+
+            // Only raise the event if the station entity still exists
+            if (_entManager.EntityExists(Station))
+            {
+                _entManager.EventBus.RaiseLocalEvent(Station, ev);
+            }
+            else
+            {
+                _sawmill.Warning($"Cannot raise ExpeditionSpawnCompleteEvent: Station entity {Station} no longer exists (likely due to round persistence)");
+
+                // For round persistence, try to find a console with local expedition data to notify
+                var consoleQuery = _entManager.AllEntityQueryEnumerator<SalvageExpeditionConsoleComponent>();
+                while (consoleQuery.MoveNext(out var consoleUid, out var consoleComp))
+                {
+                    if (consoleComp.LocalExpeditionData != null)
+                    {
+                        _sawmill.Info($"Notifying expedition console {consoleUid} of mission completion via LocalExpeditionData");
+                        _entManager.EventBus.RaiseLocalEvent(consoleUid, ev);
+                        break; // Only notify the first console found
+                    }
+                }
+            }
+
             if (errorStackTrace != null)
-                _sawmill.Error("salvage", $"Expedition generation failed with exception: {errorStackTrace}!");
+                _sawmill.Error($"Expedition generation failed with exception: {errorStackTrace}!");
             if (!success)
             {
                 // Invalidate station, expedition cancellation will be handled by task handler
@@ -138,7 +164,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
 
     private async Task<bool> InternalProcess() // Frontier: make process an internal function (for a try block indenting an entire), add "out EntityUid mapUid" param
     {
-        _sawmill.Debug("salvage", $"Spawning salvage mission with seed {_missionParams.Seed}");
+        _sawmill.Debug($"Spawning salvage mission with seed {_missionParams.Seed}");
         mapUid = _map.CreateMap(out var mapId, runMapInit: false); // Frontier: remove var
         MetaDataComponent? metadata = null;
         var grid = _entManager.EnsureComponent<MapGridComponent>(mapUid);
@@ -208,6 +234,7 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         // Setup expedition
         var expedition = _entManager.AddComponent<SalvageExpeditionComponent>(mapUid);
         expedition.Station = Station;
+        expedition.Console = Console; // HARDLIGHT: Store console reference for FTL targeting
         expedition.EndTime = _timing.CurTime + mission.Duration;
         expedition.MissionParams = _missionParams;
 
@@ -246,10 +273,31 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
             dungeonBox = dungeonBox.ExtendToContain(tile);
         }
 
-        var stationData = _entManager.GetComponent<StationDataComponent>(Station);
+        // HARDLIGHT: Modified for round persistence - work with or without StationDataComponent
+        EntityUid? shuttleUid = null;
+
+        // Try to get shuttle from station data if available
+        if (_entManager.TryGetComponent<StationDataComponent>(Station, out var stationData))
+        {
+            shuttleUid = _station.GetLargestGrid(stationData);
+            _sawmill.Debug($"Using shuttle {shuttleUid} from station {Station} for mission generation");
+        }
+        else
+        {
+            // Round persistence case: Station might not have StationDataComponent or might be a shuttle grid itself
+            // Check if the Station entity is actually a grid (could be a shuttle serving as station)
+            if (_entManager.HasComponent<MapGridComponent>(Station))
+            {
+                shuttleUid = Station;
+                _sawmill.Info($"Using Station entity {Station} as shuttle grid for mission generation (round persistence mode)");
+            }
+            else
+            {
+                _sawmill.Warning($"Station {Station} has no StationDataComponent and is not a grid - proceeding without shuttle bounds");
+            }
+        }
 
         // Get ship bounding box relative to largest grid coords
-        var shuttleUid = _station.GetLargestGrid(stationData);
         Box2 shuttleBox = new Box2();
 
         if (shuttleUid is { Valid: true } vesselUid &&
@@ -392,7 +440,16 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         if (shuttleUid is { Valid: true })
         {
             var shuttle = _entManager.GetComponent<ShuttleComponent>(shuttleUid.Value);
-            _shuttle.FTLToCoordinates(shuttleUid.Value, shuttle, new EntityCoordinates(mapUid, coords), 0f, 5.5f, _salvage.TravelTime);
+
+            // Check if shuttle already has FTL component to avoid warnings
+            if (_entManager.HasComponent<FTLComponent>(shuttleUid.Value))
+            {
+                _sawmill.Debug($"Shuttle {shuttleUid.Value} already has FTL component, skipping FTL setup");
+            }
+            else
+            {
+                _shuttle.FTLToCoordinates(shuttleUid.Value, shuttle, new EntityCoordinates(mapUid, coords), 0f, 5.5f, _salvage.TravelTime);
+            }
         }
         // End Frontier
 

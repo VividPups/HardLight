@@ -1,0 +1,89 @@
+- type: entity
+  parent: BasePDA
+  id: NanotrasenPDA
+  name: nanotrasen PDA
+  description: A corporate PDA issued to Nanotrasen personnel. Smells like capitalism.
+  components:
+  - type: Pda
+    id: NanotrasenIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-nanotrasen
+  - type: PdaBorderColor
+    borderColor: "#2d78c8"
+  - type: Icon
+    state: pda-nanotrasen
+
+- type: entity
+  parent: BasePDA
+  id: NanotrasenOperativePDA
+  name: nanotrasen operative PDA
+  description: A specialized PDA for Nanotrasen operatives.
+  components:
+  - type: Pda
+    id: NanotrasenOperativeIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-nanotrasen-operative
+  - type: PdaBorderColor
+    borderColor: "#1a5aa0"
+  - type: Icon
+    state: pda-nanotrasen-operative
+
+- type: entity
+  parent: BasePDA
+  id: ArcadiaPDA
+  name: arcadia PDA
+  description: A rugged PDA used by Arcadia operatives.
+  components:
+  - type: Pda
+    id: ArcadiaIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-arcadia
+  - type: PdaBorderColor
+    borderColor: "#9f2a2e"
+  - type: Icon
+    state: pda-arcadia
+
+- type: entity
+  parent: [BasePDA, BaseC3SyndicateContraband, ContrabandClothing]
+  id: CartelPDA
+  name: cartel PDA
+  description: A PDA used by cartel members for covert communications.
+  components:
+  - type: Pda
+    id: CartelIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-cartel
+  - type: PdaBorderColor
+    borderColor: "#7c00ee"
+  - type: Icon
+    state: pda-cartel
+
+- type: entity
+  parent: [BasePDA, BaseC3SyndicateContraband, ContrabandClothing]
+  id: CartelLieutenantPDA
+  name: cartel lieutenant PDA
+  description: A high-ranking PDA used by cartel lieutenants.
+  components:
+  - type: Pda
+    id: CartelLieutenantIDCard
+  - type: Appearance
+    appearanceDataInit:
+     enum.PdaVisuals.PdaType:
+       !type:String
+       pda-cartel-lieutenant
+  - type: PdaBorderColor
+    borderColor: "#5c00b3"
+  - type: Icon
+    state: pda-cartel-lieutenant

@@ -1,0 +1,22 @@
+<Document>
+  # VERDURE-CLASS BOTANY VESSEL
+
+    [color=#a4885c]Ship Size:[/color] Small
+
+	[color=#a4885c]Recommended Crew:[/color] 2
+
+	[color=#a4885c]Power Gen Type:[/color] Uranium
+
+	[color=#a4885c]Expeditions:[/color] No
+
+	[color=#a4885c]IFF Console:[/color] None
+
+  "Built in the hull of the decommissioned Kunai-class torpedo bomber, the Verdure is a botanist's dream.  There's very little you can't do with plants on the Verdure, as it features a full service layout, chemistry facilities, advanced resource extraction, and spacious freezer.  It even comes with a small shop setup."
+
+  # Tips on running JDB Verdure shuttles
+  - The typical power load for the shuttle at time of purchase is 27 [bold]kW[/bold]. For more general info on the power grid, see the guidebook article [textlink="Power" link="Power"].
+  - The shuttle features highly segmented atmospherics for the safety of the crew.
+  - For more general info on atmospherics see the guidebook article about [textlink="Atmospherics" link="Atmospherics"].
+  - For basics of shuttle piloting see [textlink="Piloting" link="Piloting"].
+
+</Document>

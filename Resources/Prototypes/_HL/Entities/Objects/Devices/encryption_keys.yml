@@ -1,0 +1,45 @@
+- type: entity
+  parent: [EncryptionKey, RecyclableItemDeviceTiny]
+  id: EncryptionKeyCartel
+  name: cartel encryption key
+  description: An encryption key with a mysterious purple glow, used by those who operate in the shadows of communication networks.
+  components:
+    - type: EncryptionKey
+      channels:
+        - Cartel
+      defaultChannel: Cartel
+    - type: Sprite
+      layers:
+        - state: crypt_red
+        - state: cartel_label
+
+- type: entity
+  parent: [EncryptionKey, RecyclableItemDeviceTiny]
+  id: EncryptionKeyArcadia
+  name: arcadia encryption key
+  description: An encryption key used by Arcadia operatives for secure communications.
+  components:
+    - type: EncryptionKey
+      channels:
+        - Arcadia
+      defaultChannel: Arcadia
+    - type: Sprite
+      layers:
+        - state: crypt_silver
+        - state: arca_label
+
+- type: entity
+  parent: [EncryptionKey, RecyclableItemDeviceTiny]
+  id: EncryptionKeyNanotrasen
+  name: nanotrasen encryption key
+  description: An encryption key used by Nanotrasen corporate communications.
+  components:
+    - type: EncryptionKey
+      channels:
+        - Nanotrasen
+      defaultChannel: Nanotrasen
+    - type: Sprite
+      layers:
+        - state: crypt_blue
+        - state: nano_label
+

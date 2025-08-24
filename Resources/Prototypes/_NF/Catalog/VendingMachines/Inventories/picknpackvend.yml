@@ -3,19 +3,19 @@
   startingInventory:
   # Weapons
     NFWeaponPistolMk58: 6
-    NFWeaponPistolPollock: 6
-    NFWeaponRifleAssaultGestio: 6
-    NFWeaponRifleAssaultNovaliteC1: 6
-    NFWeaponShotgunKammerer: 6
+    WeaponPistolPollock: 6
+    WeaponRifleNovaliteC1: 6
+    WeaponRifleGestio: 6
+    WeaponShotgunKammerer: 6
   # Magazines
     NFMagazinePistol35Empty: 6
     NFMagazineLowCapacityRifle30Empty: 6
     NFMagazineClipRifle20Empty: 6
   # Ammo boxes
     NFAmmunitionBoxPistol35: 6
-    NFAmmunitionBoxRifle20: 6
+    AmmoBox5.56x45mmBigFMJ: 6
     NFAmmunitionBoxRifle30: 6
-    NFAmmunitionBoxShellShotgunBuckshot: 6
+    AmmoBox12_gaugeBuckshot: 6
     NFAmmunitionBoxShellShotgunBeanbag: 6
   emaggedInventory:
 
@@ -24,18 +24,17 @@
   startingInventory:
   # Weapons
     NFWeaponPistolMk58: 4294967295
-    NFWeaponPistolPollock: 4294967295
-    NFWeaponRifleAssaultNovaliteC1: 4294967295
-    NFWeaponRifleAssaultGestio: 4294967295
-    NFWeaponShotgunKammerer: 4294967295
+    WeaponPistolPollock: 4294967295
+    WeaponRifleNovaliteC1: 4294967295
+    WeaponRifleGestio: 4294967295
+    WeaponShotgunKammerer: 4294967295
   # Magazines
-    NFMagazinePistol35Empty: 4294967295
-    NFMagazineClipRifle20Empty: 4294967295
-    NFMagazineLowCapacityRifle30Empty: 4294967295
+    Magazine9x19mmPistolFMJ: 4294967295
+    MagazineNovaliteC1: 4294967295
+    Magazine7.62x39mmLowCapacityFMJ: 4294967295
   # Ammo boxes
-    NFAmmunitionBoxPistol35: 4294967295
-    NFAmmunitionBoxRifle20: 4294967295
-    NFAmmunitionBoxRifle30: 4294967295
-    NFAmmunitionBoxShellShotgunBuckshot: 4294967295
-    NFAmmunitionBoxShellShotgunBeanbag: 4294967295
+    AmmoBox9x19mmBigFMJ: 4294967295
+    AmmoBox5.56x45mmBigFMJ: 4294967295
+    AmmoBox7.62x39mmBigFMJ: 4294967295
+    AmmoBox12_gaugeBuckshot: 4294967295
   emaggedInventory:

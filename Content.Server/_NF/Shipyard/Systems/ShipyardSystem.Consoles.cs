@@ -72,6 +72,43 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
     }
 
+    private void OnLoadMessage(EntityUid shipyardConsoleUid, ShipyardConsoleComponent component, ShipyardConsoleLoadMessage args)
+    {
+        if (args.Actor is not { Valid: true } player)
+            return;
+
+        if (component.TargetIdSlot.ContainerSlot?.ContainedEntity is not { Valid: true } targetId)
+        {
+            ConsolePopup(player, Loc.GetString("shipyard-console-no-idcard"));
+            PlayDenySound(player, shipyardConsoleUid, component);
+            return;
+        }
+
+        if (!HasComp<IdCardComponent>(targetId))
+        {
+            ConsolePopup(player, Loc.GetString("shipyard-console-invalid-idcard"));
+            PlayDenySound(player, shipyardConsoleUid, component);
+            return;
+        }
+
+        // Check if ID card already has a deed
+        if (HasComp<ShuttleDeedComponent>(targetId))
+        {
+            ConsolePopup(player, "ID card already has a ship deed!");
+            PlayDenySound(player, shipyardConsoleUid, component);
+            return;
+        }
+
+        // Get player session for the loading
+        if (!_player.TryGetSessionByEntity(player, out var playerSession))
+        {
+            return;
+        }
+
+        // Call the ship loading method directly with the specific console and ID card
+        LoadShipOnConsole(args.YamlData, playerSession, shipyardConsoleUid, targetId);
+    }
+
     private void OnPurchaseMessage(EntityUid shipyardConsoleUid, ShipyardConsoleComponent component, ShipyardConsolePurchaseMessage args)
     {
         if (args.Actor is not { Valid: true } player)
@@ -344,7 +381,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
 
         // Request ship save through the ShipSaveSystem
         var shipSaveSystem = _entitySystemManager.GetEntitySystem<Content.Server.Shuttles.Save.ShipSaveSystem>();
-        
+
         // Get player session from mind component
         if (!_mind.TryGetMind(player, out var mindUid, out var mindComp) || mindComp.UserId == null)
         {
@@ -352,7 +389,7 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             PlayDenySound(player, uid, component);
             return;
         }
-        
+
         var playerSession = _player.GetSessionById(mindComp.UserId.Value);
         if (playerSession == null)
         {
@@ -360,12 +397,12 @@ public sealed partial class ShipyardSystem : SharedShipyardSystem
             PlayDenySound(player, uid, component);
             return;
         }
-        
+
         shipSaveSystem.RequestSaveShip(targetId, playerSession);
-        
+
         // Remove the deed from the ID card after successful save
         RemComp<ShuttleDeedComponent>(targetId);
-        
+
         ConsolePopup(player, $"Ship {deed.ShuttleName} has been saved!");
         PlayConfirmSound(player, uid, component);
     }

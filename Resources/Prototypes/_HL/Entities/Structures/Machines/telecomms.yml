@@ -1,0 +1,29 @@
+- type: entity
+  parent: TelecomServer
+  id: TelecomServerFilledArcadia
+  suffix: Arcadia
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyArcadia
+
+- type: entity
+  parent: TelecomServer
+  id: TelecomServerFilledNanotrasen
+  suffix: Nanotrasen
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyNanotrasen
+
+- type: entity
+  parent: TelecomServer
+  id: TelecomServerFilledCartel
+  suffix: Cartel
+  components:
+  - type: ContainerFill
+    containers:
+      key_slots:
+      - EncryptionKeyCartel

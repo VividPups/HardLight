@@ -72,10 +72,10 @@ namespace Content.Shared.Shuttles.Save
     [Serializable, NetSerializable]
     public sealed class AdminSendPlayerShipsMessage : EntityEventArgs
     {
-        public List<(string filename, string shipName, DateTime timestamp, string checksum)> Ships { get; }
+        public List<(string filename, string shipName, DateTime timestamp)> Ships { get; }
         public string AdminName { get; }
 
-        public AdminSendPlayerShipsMessage(List<(string filename, string shipName, DateTime timestamp, string checksum)> ships, string adminName)
+        public AdminSendPlayerShipsMessage(List<(string filename, string shipName, DateTime timestamp)> ships, string adminName)
         {
             Ships = ships;
             AdminName = adminName;

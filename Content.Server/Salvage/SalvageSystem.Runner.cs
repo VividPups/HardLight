@@ -17,6 +17,7 @@ using Content.Server.GameTicking; // Frontier
 using Content.Server._NF.Salvage.Expeditions.Structure; // Frontier
 using Content.Server._NF.Salvage.Expeditions;
 using Content.Shared.Salvage; // Frontier
+using Robust.Shared.GameObjects; // HARDLIGHT: For SpawnTimer extension method
 
 namespace Content.Server.Salvage;
 
@@ -108,13 +109,20 @@ public sealed partial class SalvageSystem
         if (component.Stage != ExpeditionStage.Added)
             return;
 
-        // Frontier: early finish
-        if (TryComp<SalvageExpeditionDataComponent>(component.Station, out var data))
+        // HARDLIGHT: Directly update the console that initiated this mission
+        if (component.Console != null && TryComp<SalvageExpeditionConsoleComponent>(component.Console.Value, out var consoleComp))
         {
-            data.CanFinish = true;
-            UpdateConsoles((component.Station, data));
+            if (consoleComp.LocalExpeditionData != null)
+            {
+                consoleComp.LocalExpeditionData.CanFinish = true;
+                UpdateConsole((component.Console.Value, consoleComp));
+                Log.Info($"FTL completed - enabled finishing for console {ToPrettyString(component.Console.Value)}");
+            }
         }
-        // End Frontier: early finish
+        else
+        {
+            Log.Warning($"FTL completed but no valid console reference found for expedition on {args.MapUid}");
+        }
 
         Announce(args.MapUid, Loc.GetString("salvage-expedition-announcement-countdown-minutes", ("duration", (component.EndTime - _timing.CurTime).Minutes)));
 
@@ -163,13 +171,19 @@ public sealed partial class SalvageSystem
 
     private void OnFTLStarted(ref FTLStartedEvent ev)
     {
-        if (!TryComp<SalvageExpeditionComponent>(ev.FromMapUid, out var expedition) ||
-            !TryComp<SalvageExpeditionDataComponent>(expedition.Station, out var station))
-        {
+        if (!TryComp<SalvageExpeditionComponent>(ev.FromMapUid, out var expedition))
             return;
-        }
 
-        station.CanFinish = false; // Frontier
+        // HARDLIGHT: Directly update the console that initiated this mission
+        if (expedition.Console != null && TryComp<SalvageExpeditionConsoleComponent>(expedition.Console.Value, out var consoleComp))
+        {
+            if (consoleComp.LocalExpeditionData != null)
+            {
+                consoleComp.LocalExpeditionData.CanFinish = false;
+                UpdateConsole((expedition.Console.Value, consoleComp));
+                Log.Info($"FTL started - disabled finishing for console {ToPrettyString(expedition.Console.Value)}");
+            }
+        }
 
         // Check if any shuttles remain.
         var query = EntityQueryEnumerator<ShuttleComponent, TransformComponent>();
@@ -181,7 +195,12 @@ public sealed partial class SalvageSystem
         }
 
         // Last shuttle has left so finish the mission.
-        QueueDel(ev.FromMapUid.Value);
+        if (ev.FromMapUid.HasValue && Exists(ev.FromMapUid.Value))
+        {
+            // HARDLIGHT: Clean up console state before deleting expedition
+            CleanupExpeditionConsoleState(ev.FromMapUid.Value);
+            QueueDel(ev.FromMapUid.Value);
+        }
     }
 
     // Runs the expedition
@@ -296,6 +315,8 @@ public sealed partial class SalvageSystem
 
             if (remaining < TimeSpan.Zero)
             {
+                // HARDLIGHT: Clean up console state before deleting expedition
+                CleanupExpeditionConsoleState(uid);
                 QueueDel(uid);
             }
         }
@@ -362,5 +383,47 @@ public sealed partial class SalvageSystem
             }
         }
         // End Frontier: mission-specific logic
+    }
+
+    // HARDLIGHT: Clean up console state when expedition ends
+    private void CleanupExpeditionConsoleState(EntityUid expeditionUid)
+    {
+        if (!TryComp<SalvageExpeditionComponent>(expeditionUid, out var component))
+            return;
+
+        // Reset the console that initiated this expedition
+        if (component.Console != null && TryComp<SalvageExpeditionConsoleComponent>(component.Console.Value, out var consoleComp))
+        {
+            if (consoleComp.LocalExpeditionData != null)
+            {
+                Log.Info($"Cleaning up expedition state for console {ToPrettyString(component.Console.Value)}");
+
+                // Reset console state immediately
+                consoleComp.LocalExpeditionData.ActiveMission = 0;
+                consoleComp.LocalExpeditionData.CanFinish = false;
+                consoleComp.LocalExpeditionData.Cooldown = false;
+
+                // Update console to show cleared state
+                UpdateConsole((component.Console.Value, consoleComp));
+
+                // Generate new missions after a delay to prevent visual glitches
+                var consoleUid = component.Console.Value;
+                consoleUid.SpawnTimer(TimeSpan.FromMilliseconds(750), () =>
+                {
+                    if (Exists(consoleUid) && TryComp<SalvageExpeditionConsoleComponent>(consoleUid, out var comp) && comp.LocalExpeditionData != null)
+                    {
+                        GenerateLocalMissions(comp.LocalExpeditionData);
+                        UpdateConsole((consoleUid, comp));
+                        Log.Info($"Console {ToPrettyString(consoleUid)} missions regenerated after expedition cleanup");
+                    }
+                });
+
+                Log.Info($"Console {ToPrettyString(component.Console.Value)} state reset successfully");
+            }
+        }
+        else
+        {
+            Log.Warning($"Failed to cleanup console state for expedition {expeditionUid} - console reference missing or invalid");
+        }
     }
 }

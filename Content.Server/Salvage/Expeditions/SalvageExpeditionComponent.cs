@@ -35,6 +35,12 @@ public sealed partial class SalvageExpeditionComponent : SharedSalvageExpedition
     [DataField("station")]
     public EntityUid Station;
 
+    /// <summary>
+    /// HARDLIGHT: Console that initiated this mission for direct targeting
+    /// </summary>
+    [DataField("console")]
+    public EntityUid? Console;
+
     [ViewVariables] public bool Completed = false;
 
     // Frontier: moved to Client

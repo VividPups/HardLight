@@ -38,8 +38,9 @@ namespace Content.Shared.Shuttles.Save
         [DataField("ship_name")]
         public string ShipName { get; set; } = string.Empty;
 
+        // Legacy checksum field - ignored but kept for backward compatibility with old ship files
         [DataField("checksum")]
-        public string Checksum { get; set; } = string.Empty;
+        public string? Checksum { get; set; } = null;
 
         // Add other relevant metadata as needed, e.g., game version, server ID
     }

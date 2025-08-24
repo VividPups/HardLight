@@ -15,6 +15,14 @@ using Content.Server.Salvage.Expeditions; // Frontier
 using Content.Shared.Mind.Components; // Frontier
 using Content.Shared.Mobs.Components; // Frontier
 using Robust.Shared.Physics; // Frontier
+using Content.Server.Chat.Systems; // HARDLIGHT: For ChatSystem (server-side)
+using Content.Shared.Salvage; // HARDLIGHT: For SalvageMissionType
+using System.Threading; // HARDLIGHT: For CancellationTokenSource
+using System.Linq; // HARDLIGHT: For ToList() and Take()
+using Content.Shared.Shuttles.Systems; // HARDLIGHT: For FTLState
+using Robust.Shared.Player; // HARDLIGHT: For Filter
+using Content.Shared.Timing; // HARDLIGHT: For StartEndTime
+using Robust.Shared.GameObjects; // HARDLIGHT: For SpawnTimer extension method
 
 namespace Content.Server.Salvage;
 
@@ -25,171 +33,166 @@ public sealed partial class SalvageSystem
 
     [Dependency] private readonly SharedPopupSystem _popupSystem = default!; // Frontier
     [Dependency] private readonly SalvageSystem _salvage = default!; // Frontier
+    [Dependency] private readonly ChatSystem _chatSystem = default!; // HARDLIGHT
 
     private const float ShuttleFTLMassThreshold = 50f; // Frontier
     private const float ShuttleFTLRange = 150f; // Frontier
 
     private void OnSalvageClaimMessage(EntityUid uid, SalvageExpeditionConsoleComponent component, ClaimSalvageMessage args)
     {
-        var station = _station.GetOwningStation(uid);
-
-        if (!TryComp<SalvageExpeditionDataComponent>(station, out var data) || data.Claimed)
-            return;
-
-        if (!data.Missions.TryGetValue(args.Index, out var missionparams))
-            return;
-
-        // Frontier: prevent expeditions if there are too many out already.
-        var activeExpeditionCount = 0;
-        var expeditionQuery = AllEntityQuery<SalvageExpeditionDataComponent, MetaDataComponent>();
-        while (expeditionQuery.MoveNext(out var expeditionUid, out _, out _))
+        // HARDLIGHT: Fully independent console system - no station dependencies
+        var data = component.LocalExpeditionData;
+        if (data == null)
         {
-            if (TryComp<SalvageExpeditionDataComponent>(expeditionUid, out var expeditionData) && expeditionData.Claimed)
-                activeExpeditionCount++;
+            // Initialize local data if it doesn't exist
+            component.LocalExpeditionData = new SalvageExpeditionDataComponent();
+            component.LocalExpeditionData.NextOffer = _timing.CurTime;
+            GenerateLocalMissions(component.LocalExpeditionData);
+            data = component.LocalExpeditionData;
         }
 
-        if (activeExpeditionCount >= _cfgManager.GetCVar(NFCCVars.SalvageExpeditionMaxActive))
+        // Skip if already claimed or invalid mission
+        if (data.ActiveMission != 0 || !data.Missions.TryGetValue(args.Index, out var missionparams))
         {
+            Log.Warning($"Mission claim rejected for console {ToPrettyString(uid)}: ActiveMission={data.ActiveMission}, HasMission={data.Missions.ContainsKey(args.Index)}, MissionCount={data.Missions.Count}, RequestedIndex={args.Index}");
             PlayDenySound((uid, component));
-            _popupSystem.PopupEntity(Loc.GetString("shuttle-ftl-too-many"), uid, PopupType.MediumCaution);
-            UpdateConsoles((station.Value, data));
+
+            // If console thinks it has an active mission but it might be stale, try to reset state
+            if (data.ActiveMission != 0)
+            {
+                Log.Info($"Console {ToPrettyString(uid)} has stale active mission {data.ActiveMission}, attempting to reset state");
+                data.ActiveMission = 0;
+                data.CanFinish = false;
+                data.Cooldown = false;
+
+                // Regenerate missions to ensure fresh state after a short delay
+                uid.SpawnTimer(TimeSpan.FromMilliseconds(100), () =>
+                {
+                    GenerateLocalMissions(data);
+                    UpdateConsole((uid, component));
+                });
+            }
+
+            UpdateConsole((uid, component));
             return;
         }
-        // End Frontier
 
-        // var cdUid = Spawn(CoordinatesDisk, Transform(uid).Coordinates); // Frontier: no disk-based FTL
-        // SpawnMission(missionparams, station.Value, cdUid); // Frontier: no disk-based FTL
-
-        // Frontier: FTL travel is currently restricted to expeditions and such, and so we need to put this here
-        #region Frontier FTL changes
-        // until FTL changes for us in some way.
-
-        // Run a proximity check (unless using a debug console)
-        if (_salvage.ProximityCheck && !component.Debug)
+        // Find the grid this console is on
+        if (!TryComp<TransformComponent>(uid, out var consoleXform))
         {
-            if (!TryComp<StationDataComponent>(station, out var stationData)
-                || _station.GetLargestGrid(stationData) is not { Valid: true } ourGrid
-                || !TryComp<MapGridComponent>(ourGrid, out var gridComp))
-            {
-                PlayDenySound((uid, component));
-                _popupSystem.PopupEntity(Loc.GetString("shuttle-ftl-invalid"), uid, PopupType.MediumCaution);
-                UpdateConsoles((station.Value, data));
-                return;
-            }
-
-            if (HasComp<FTLComponent>(ourGrid))
-            {
-                PlayDenySound((uid, component));
-                _popupSystem.PopupEntity(Loc.GetString("shuttle-ftl-recharge"), uid, PopupType.MediumCaution);
-                UpdateConsoles((station.Value, data));
-                return;
-            }
-
-            var xform = Transform(ourGrid);
-            var bounds = _transform.GetWorldMatrix(ourGrid).TransformBox(gridComp.LocalAABB).Enlarged(ShuttleFTLRange);
-            var bodyQuery = GetEntityQuery<PhysicsComponent>();
-            var otherGrids = new List<Entity<MapGridComponent>>();
-            _mapManager.FindGridsIntersecting(xform.MapID, bounds, ref otherGrids);
-            foreach (var otherGrid in otherGrids)
-            {
-                if (ourGrid == otherGrid.Owner ||
-                    !bodyQuery.TryGetComponent(otherGrid.Owner, out var body) ||
-                    body.Mass < ShuttleFTLMassThreshold && body.BodyType == BodyType.Dynamic)
-                {
-                    continue;
-                }
-
-                PlayDenySound((uid, component));
-                _popupSystem.PopupEntity(Loc.GetString("shuttle-ftl-proximity"), uid, PopupType.MediumCaution);
-                UpdateConsoles((station.Value, data));
-                return;
-            }
+            Log.Error($"Console {ToPrettyString(uid)} has no transform component");
+            PlayDenySound((uid, component));
+            _popupSystem.PopupEntity(Loc.GetString("salvage-expedition-shuttle-not-found"), uid, PopupType.MediumCaution);
+            UpdateConsole((uid, component));
+            return;
         }
-        SpawnMission(missionparams, station.Value, null);
-        #endregion Frontier FTL changes
-        // End Frontier
 
+        var ourGrid = consoleXform.GridUid;
+        if (ourGrid == null || !TryComp<MapGridComponent>(ourGrid, out var gridComp))
+        {
+            Log.Error($"Console {ToPrettyString(uid)} grid {ourGrid} has no map grid component");
+            PlayDenySound((uid, component));
+            _popupSystem.PopupEntity(Loc.GetString("salvage-expedition-shuttle-not-found"), uid, PopupType.MediumCaution);
+            UpdateConsole((uid, component));
+            return;
+        }
+
+        // Store reference to console in mission params for FTL completion tracking
+        component.ActiveConsole = uid;
+
+        // Directly spawn the mission - console is completely independent
+        try
+        {
+            Log.Info($"Spawning mission {args.Index} ({missionparams.MissionType}) for independent console {ToPrettyString(uid)} on grid {ourGrid}");
+            SpawnMissionForConsole(missionparams, ourGrid.Value, uid);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to spawn mission for console {ToPrettyString(uid)}: {ex}");
+            return; // Don't mark as claimed if spawning failed
+        }
+
+        // Mark as claimed and active - console handles its own state
         data.ActiveMission = args.Index;
-        var mission = GetMission(missionparams.MissionType, _prototypeManager.Index<SalvageDifficultyPrototype>(missionparams.Difficulty), missionparams.Seed); // Frontier: add MissionType
-        // Frontier - TODO: move this to progression for secondary window timer
+        data.CanFinish = false; // Will be set to true when FTL completes
+
+        var mission = GetMission(missionparams.MissionType, _prototypeManager.Index<SalvageDifficultyPrototype>(missionparams.Difficulty), missionparams.Seed);
         data.NextOffer = _timing.CurTime + mission.Duration + TimeSpan.FromSeconds(1);
-        data.CooldownTime = mission.Duration + TimeSpan.FromSeconds(1); // Frontier
+        data.CooldownTime = mission.Duration + TimeSpan.FromSeconds(1);
 
-        // _labelSystem.Label(cdUid, GetFTLName(_prototypeManager.Index<LocalizedDatasetPrototype>("NamesBorer"), missionparams.Seed)); // Frontier: no disc
-        // _audio.PlayPvs(component.PrintSound, uid); // Frontier: no disc
+        UpdateConsole((uid, component));
 
-        UpdateConsoles((station.Value, data));
+        // Announce to all players on this grid only
+        if (consoleXform.GridUid != null)
+        {
+            var filter = Filter.Empty().AddInGrid(consoleXform.GridUid.Value);
+            var announcement = Loc.GetString("salvage-expedition-announcement-claimed");
+            _chatSystem.DispatchFilteredAnnouncement(filter, announcement, uid,
+                sender: "Expedition Console", colorOverride: Color.LightBlue);
+        }
+
+        Log.Info($"Mission {args.Index} successfully claimed on independent console {ToPrettyString(uid)}");
     }
 
     // Frontier: early expedition end
     private void OnSalvageFinishMessage(EntityUid entity, SalvageExpeditionConsoleComponent component, FinishSalvageMessage e)
     {
-        var station = _station.GetOwningStation(entity);
-        if (!TryComp<SalvageExpeditionDataComponent>(station, out var data) || !data.CanFinish)
+        // HARDLIGHT: Fully independent console system - no station dependencies
+        var data = component.LocalExpeditionData;
+        if (data == null || !data.CanFinish)
+        {
+            PlayDenySound((entity, component));
+            UpdateConsole((entity, component));
             return;
+        }
 
-        // Based on SalvageSystem.Runner:OnConsoleFTLAttempt
-        if (!TryComp(entity, out TransformComponent? xform)) // Get the console's grid (if you move it, rip you)
+        // Get the console's grid
+        if (!TryComp(entity, out TransformComponent? xform))
         {
             PlayDenySound((entity, component));
             _popupSystem.PopupEntity(Loc.GetString("salvage-expedition-shuttle-not-found"), entity, PopupType.MediumCaution);
-            UpdateConsoles((station.Value, data));
+            UpdateConsole((entity, component));
             return;
         }
 
-        // Frontier: check if any player characters or friendly ghost roles are outside
-        var query = EntityQueryEnumerator<MindContainerComponent, MobStateComponent, TransformComponent>();
-        while (query.MoveNext(out var uid, out var mindContainer, out var _, out var mobXform))
-        {
-            if (mobXform.MapUid != xform.MapUid)
-                continue;
-
-            // Not player controlled (ghosted)
-            if (!mindContainer.HasMind)
-                continue;
-
-            // NPC, definitely not a person
-            if (HasComp<ActiveNPCComponent>(uid) || HasComp<NFSalvageMobRestrictionsComponent>(uid))
-                continue;
-
-            // Hostile ghost role, continue
-            if (TryComp(uid, out NpcFactionMemberComponent? npcFaction))
-            {
-                var hostileFactions = npcFaction.HostileFactions;
-                if (hostileFactions.Contains("NanoTrasen")) // TODO: move away from hardcoded faction
-                    continue;
-            }
-
-            // Okay they're on salvage, so are they on the shuttle.
-            if (mobXform.GridUid != xform.GridUid)
-            {
-                PlayDenySound((entity, component));
-                _popupSystem.PopupEntity(Loc.GetString("salvage-expedition-not-everyone-aboard", ("target", uid)), entity, PopupType.MediumCaution);
-                UpdateConsoles((station.Value, data));
-                return;
-            }
-        }
-        // End SalvageSystem.Runner:OnConsoleFTLAttempt
-
+        // Complete the expedition - console handles its own state independently
         data.CanFinish = false;
-        UpdateConsoles((station.Value, data));
+        data.ActiveMission = 0;
+        data.Cooldown = false;
 
-        var map = Transform(entity).MapUid;
+        // Update console first to show cleared state
+        UpdateConsole((entity, component));
 
-        if (!TryComp<SalvageExpeditionComponent>(map, out var expedition))
-            return;
+        // Generate new missions after a short delay to prevent visual glitches
+        entity.SpawnTimer(TimeSpan.FromMilliseconds(500), () =>
+        {
+            if (Exists(entity) && TryComp<SalvageExpeditionConsoleComponent>(entity, out var comp) && comp.LocalExpeditionData != null)
+            {
+                GenerateLocalMissions(comp.LocalExpeditionData);
+                UpdateConsole((entity, comp));
+            }
+        });
 
-        const int departTime = 20;
-        var newEndTime = _timing.CurTime + TimeSpan.FromSeconds(departTime);
+        // Reset FTL component to cooldown state to allow immediate re-expedition
+        if (xform.GridUid != null && TryComp<FTLComponent>(xform.GridUid.Value, out var ftlComp))
+        {
+            ftlComp.State = FTLState.Cooldown;
+            ftlComp.StateTime = new StartEndTime { Start = TimeSpan.Zero, End = TimeSpan.Zero }; // Immediate cooldown completion
+            Dirty(xform.GridUid.Value, ftlComp);
+        }
 
-        if (expedition.EndTime <= newEndTime)
-            return;
+        UpdateConsole((entity, component));
 
-        expedition.Stage = ExpeditionStage.FinalCountdown;
-        expedition.EndTime = newEndTime;
-        Dirty(map.Value, expedition);
+        // Announce completion to grid only
+        if (xform.GridUid != null)
+        {
+            var filter = Filter.Empty().AddInGrid(xform.GridUid.Value);
+            var announcement = Loc.GetString("salvage-expedition-announcement-completed");
+            _chatSystem.DispatchFilteredAnnouncement(filter, announcement, entity,
+                sender: "Expedition Console", colorOverride: Color.Green);
+        }
 
-        Announce(map.Value, Loc.GetString("salvage-expedition-announcement-early-finish", ("departTime", departTime)));
+        Log.Info($"Expedition finished independently on console {ToPrettyString(entity)}");
     }
     // End Frontier: early expedition end
 
@@ -205,44 +208,171 @@ public sealed partial class SalvageSystem
 
     private void UpdateConsoles(Entity<SalvageExpeditionDataComponent> component)
     {
-        var state = GetState(component);
-
-        var query = AllEntityQuery<SalvageExpeditionConsoleComponent, UserInterfaceComponent, TransformComponent>();
-        while (query.MoveNext(out var uid, out _, out var uiComp, out var xform))
-        {
-            var station = _station.GetOwningStation(uid, xform);
-
-            if (station != component.Owner)
-                continue;
-
-            _ui.SetUiState((uid, uiComp), SalvageConsoleUiKey.Expedition, state);
-        }
+        // HARDLIGHT: This method is obsolete with independent console system
+        // Each console manages its own state independently
+        Log.Debug("UpdateConsoles called but consoles are now independent - no action needed");
     }
 
     private void UpdateConsole(Entity<SalvageExpeditionConsoleComponent> component)
     {
-        var station = _station.GetOwningStation(component);
-        SalvageExpeditionConsoleState state;
+        // HARDLIGHT: Fully independent console system - no station dependencies
+        var consoleComp = component.Comp;
+        var uid = component.Owner;
 
-        if (TryComp<SalvageExpeditionDataComponent>(station, out var dataComponent))
+        // Initialize local data if it doesn't exist
+        if (consoleComp.LocalExpeditionData == null)
         {
-            state = GetState(dataComponent);
-        }
-        else
-        {
-            state = new SalvageExpeditionConsoleState(TimeSpan.Zero, false, true, 0, new List<SalvageMissionParams>(), false, TimeSpan.FromSeconds(1)); // Frontier: add false, 1 second timespan as last args (cannot finish, not on a mission)
+            Log.Info($"Initializing independent expedition data for console {ToPrettyString(uid)}");
+            consoleComp.LocalExpeditionData = new SalvageExpeditionDataComponent();
+            consoleComp.LocalExpeditionData.NextOffer = _timing.CurTime;
+            consoleComp.LocalExpeditionData.Cooldown = false;
+            consoleComp.LocalExpeditionData.ActiveMission = 0;
+            consoleComp.LocalExpeditionData.CanFinish = false;
+            consoleComp.LocalExpeditionData.CooldownTime = TimeSpan.Zero;
+            GenerateLocalMissions(consoleComp.LocalExpeditionData);
         }
 
-        // Frontier: if we have a lingering FTL component, we cannot start a new mission
-        if (!TryComp<StationDataComponent>(station, out var stationData) ||
-                _station.GetLargestGrid(stationData) is not { Valid: true } grid ||
-                HasComp<FTLComponent>(grid))
+        var data = consoleComp.LocalExpeditionData;
+
+        // Generate missions if needed
+        if (data.Missions.Count == 0 && data.NextOffer < _timing.CurTime)
         {
-            state.Cooldown = true; //Hack: disable buttons
+            GenerateLocalMissions(data);
         }
-        // End Frontier
+
+        // Always create functional state - console operates independently
+        var state = new SalvageExpeditionConsoleState(
+            data.NextOffer,
+            data.ActiveMission != 0,
+            false, // Never disable - console is independent
+            data.ActiveMission,
+            data.Missions.Values.ToList(),
+            data.CanFinish,
+            data.CooldownTime
+        );
+
+        if (!TryComp<UserInterfaceComponent>(uid, out var uiComp))
+        {
+            Log.Warning($"Console {ToPrettyString(uid)} has no UserInterfaceComponent");
+            return;
+        }
 
         _ui.SetUiState(component.Owner, SalvageConsoleUiKey.Expedition, state);
+        Log.Debug($"Updated independent console {ToPrettyString(uid)} with {state.Missions.Count} missions");
+    }
+
+    // HARDLIGHT: Direct mission spawning for console-specific expeditions
+    private void SpawnMissionForConsole(SalvageMissionParams missionParams, EntityUid shuttleGrid, EntityUid consoleUid)
+    {
+        // HARDLIGHT: Fully independent console system - no station dependencies
+        Log.Info($"Spawning independent mission for console {consoleUid} on shuttle {shuttleGrid}");
+
+        // Directly spawn the mission using the existing job system
+        // HARDLIGHT: For independent console system, use shuttle as station and pass console reference
+        var missionStation = shuttleGrid; // Always use shuttle grid for independent consoles
+        var cancelToken = new CancellationTokenSource();
+        var job = new SpawnSalvageMissionJob(
+            SalvageJobTime,
+            EntityManager,
+            _timing,
+            _logManager,
+            _prototypeManager,
+            _anchorable,
+            _biome,
+            _dungeon,
+            _metaData,
+            _mapSystem,
+            _station,
+            _shuttle,
+            this,
+            missionStation,
+            consoleUid, // HARDLIGHT: Pass console reference for FTL targeting
+            null, // No coordinates disk for console missions
+            missionParams,
+            cancelToken.Token);
+
+        _salvageJobs.Add((job, cancelToken));
+        _salvageQueue.EnqueueJob(job);
+    }
+
+    // HARDLIGHT: Self-sufficient mission generation for individual consoles
+    private void GenerateLocalMissions(SalvageExpeditionDataComponent component)
+    {
+        try
+        {
+            component.Missions.Clear();
+            Log.Debug($"Generating local missions for expedition console (clearing {component.Missions.Count} existing missions)");
+
+            // Force generate missions regardless of any dependencies
+            var missionDifficulties = new List<(ProtoId<SalvageDifficultyPrototype> id, int value)>
+            {
+                ("NFModerate", 0),
+                ("NFHazardous", 1),
+                ("NFExtreme", 2)
+            };
+
+            if (missionDifficulties.Count <= 0)
+            {
+                Log.Warning("No mission difficulties available, using fallback mission generation");
+                // Fallback if prototypes are missing - create basic missions anyway
+                for (var i = 0; i < 6; i++) // Use hardcoded limit for expedition console
+                {
+                    var mission = new SalvageMissionParams
+                    {
+                        Index = component.NextIndex,
+                        MissionType = (SalvageMissionType)_random.NextByte((byte)SalvageMissionType.Max + 1),
+                        Seed = _random.Next(),
+                        Difficulty = "NFModerate", // Default fallback
+                    };
+                    component.Missions[component.NextIndex++] = mission;
+                }
+                Log.Info($"Generated {component.Missions.Count} fallback missions");
+                return;
+            }
+
+            _random.Shuffle(missionDifficulties);
+            var difficulties = missionDifficulties.Take(6).ToList(); // Use hardcoded limit for expedition console
+
+            while (difficulties.Count < 6) // Use hardcoded limit for expedition console
+            {
+                var difficultyIndex = _random.Next(missionDifficulties.Count);
+                difficulties.Add(missionDifficulties[difficultyIndex]);
+            }
+            difficulties.Sort((x, y) => Comparer<int>.Default.Compare(x.value, y.value));
+
+            Log.Debug($"Selected difficulties: {string.Join(", ", difficulties.Select(d => d.id))}");
+
+            for (var i = 0; i < 6; i++) // Use hardcoded limit for expedition console
+            {
+                var mission = new SalvageMissionParams
+                {
+                    Index = component.NextIndex,
+                    MissionType = (SalvageMissionType)_random.NextByte((byte)SalvageMissionType.Max + 1),
+                    Seed = _random.Next(),
+                    Difficulty = difficulties[i].id,
+                };
+                component.Missions[component.NextIndex++] = mission;
+                Log.Debug($"Generated mission {mission.Index}: {mission.MissionType} ({mission.Difficulty})");
+            }
+
+            Log.Info($"Successfully generated {component.Missions.Count} missions for expedition console");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to generate local missions for expedition console: {ex}");
+
+            // Emergency fallback - create at least one basic mission
+            component.Missions.Clear();
+            var emergencyMission = new SalvageMissionParams
+            {
+                Index = component.NextIndex,
+                MissionType = SalvageMissionType.Destruction,
+                Seed = _random.Next(),
+                Difficulty = "NFModerate",
+            };
+            component.Missions[component.NextIndex++] = emergencyMission;
+            Log.Warning($"Created emergency fallback mission {emergencyMission.Index}");
+        }
     }
 
     // Frontier: deny sound

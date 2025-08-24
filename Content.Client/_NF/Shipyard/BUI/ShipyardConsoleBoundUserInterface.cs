@@ -57,7 +57,7 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
             //     _rulesWindow.OpenCentered();
             // }
         }
-        
+
         InitializeSaveLoadControls();
     }
 
@@ -82,7 +82,8 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
 
         // Subscribe to ship updates
         _shipFileManagementSystem.OnShipsUpdated += RefreshSavedShipList;
-        
+        _shipFileManagementSystem.OnShipLoaded += OnShipLoaded;
+
         RefreshSavedShipList();
     }
 
@@ -108,10 +109,29 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
             Logger.Warning("No ship selected for loading");
             return;
         }
-        
+
         var selectedItem = _savedShipsList[_selectedShipIndex];
         var filePath = (string)selectedItem.Metadata!;
-        await _shipFileManagementSystem.LoadShipFromFile(filePath);
+
+        // Load ship YAML data and send via console-specific message
+        try
+        {
+            var yamlData = await _shipFileManagementSystem.GetShipYamlData(filePath);
+            if (yamlData != null)
+            {
+                // Send the load message through the console's BoundUserInterface system
+                SendMessage(new ShipyardConsoleLoadMessage(yamlData));
+                Logger.Info($"Sent ship load request for '{selectedItem.Text}' via console");
+            }
+            else
+            {
+                Logger.Error($"Failed to load YAML data for ship '{selectedItem.Text}'");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error loading ship '{selectedItem.Text}': {ex.Message}");
+        }
     }
 
     private void OnSavedShipSelected(ItemList.ItemListSelectedEventArgs args)
@@ -122,15 +142,22 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
             _loadShipButton.Disabled = false;
     }
 
+    private void OnShipLoaded(string shipName)
+    {
+        // Refresh the ship list when a ship is loaded
+        RefreshSavedShipList();
+        Logger.Info($"Ship '{shipName}' was loaded - refreshed saved ship list");
+    }
+
     private void RefreshSavedShipList()
     {
         if (_savedShipsList == null)
             return;
         _savedShipsList.Clear();
-        
+
         var savedShipFiles = _shipFileManagementSystem.GetSavedShipFiles();
         //Logger.Info($"RefreshSavedShipList: Found {savedShipFiles.Count} ships to display");
-        
+
         foreach (var filePath in savedShipFiles)
         {
             // Extract filename without extension in a sandbox-safe way
@@ -139,12 +166,11 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
             item.Metadata = filePath;
             //Logger.Info($"Added ship to UI list: {fileName} (path: {filePath})");
         }
-        
+
         // Enable/disable load button based on available ships
         if (_loadShipButton != null)
         {
             _loadShipButton.Disabled = savedShipFiles.Count == 0;
-            Logger.Info($"Load button disabled: {_loadShipButton.Disabled}");
         }
     }
 
@@ -187,12 +213,9 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
         var castState = (ShipyardConsoleInterfaceState) state;
         Populate(castState.ShipyardPrototypes.available, castState.ShipyardPrototypes.unavailable, castState.FreeListings, castState.IsTargetIdPresent);
         _menu?.UpdateState(castState);
-        
-        // Only refresh saved ships list if the UI is actually open
-        if (IsOpened)
-        {
-            RefreshSavedShipList();
-        }
+
+        // Don't refresh saved ships list on every update - it's handled by OnShipsUpdated event
+        // and when the UI is first opened
     }
 
     private void ApproveOrder(ButtonEventArgs args)
@@ -220,11 +243,12 @@ public sealed class ShipyardConsoleBoundUserInterface : BoundUserInterface
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        
+
         if (disposing)
         {
             // Unsubscribe from events to prevent memory leaks
             _shipFileManagementSystem.OnShipsUpdated -= RefreshSavedShipList;
+            _shipFileManagementSystem.OnShipLoaded -= OnShipLoaded;
         }
     }
 }
