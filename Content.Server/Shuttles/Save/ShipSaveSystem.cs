@@ -20,11 +20,11 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
         [Dependency] private readonly IServerNetManager _netManager = default!;
-        
+
         // Store pending admin requests
         private static readonly Dictionary<string, Action<string>> _pendingAdminRequests = new();
         // Store player ship data for admin commands
-        private static readonly Dictionary<string, List<(string filename, string shipName, DateTime timestamp, string checksum)>> _playerShipCache = new();
+        private static readonly Dictionary<string, List<(string filename, string shipName, DateTime timestamp)>> _playerShipCache = new();
 
         public override void Initialize()
         {
@@ -123,7 +123,7 @@ namespace Content.Server.Shuttles.Save
                 return;
 
             Logger.Info($"Player {playerSession.Name} requested to load ship from YAML data");
-            
+
             // TODO: Implement ship loading from saved files
             // This would involve deserializing the ship data and spawning it in the game world
             // For now, we just log the request
@@ -144,38 +144,20 @@ namespace Content.Server.Shuttles.Save
             var key = $"player_ships_{msg.AdminName}";
             if (_pendingAdminRequests.TryGetValue(key, out var callback))
             {
-                // Cache the ship data for later blacklist commands
+                // Cache the ship data for later commands
                 _playerShipCache[key] = msg.Ships;
-                
+
                 var result = $"=== Ships for player ===\n\n";
                 for (int i = 0; i < msg.Ships.Count; i++)
                 {
-                    var (filename, shipName, timestamp, checksum) = msg.Ships[i];
-                    var serverBinding = Content.Server.Administration.Commands.ShipBlacklistService.ExtractServerBinding(checksum) ?? "Unknown";
-                    var isBlacklisted = Content.Server.Administration.Commands.ShipBlacklistService.IsBlacklisted(checksum);
+                    var (filename, shipName, timestamp) = msg.Ships[i];
                     result += $"[{i + 1}] {shipName} ({filename})\n";
                     result += $"    Saved: {timestamp:yyyy-MM-dd HH:mm:ss}\n";
-                    result += $"    Ship ID: {serverBinding}\n";
-                    result += $"    Status: {(isBlacklisted ? "BLACKLISTED" : "OK")}\n";
                     result += "\n";
                 }
-                result += "Use: shipsave_blacklist [player] [ship_id] [reason]\n";
-                result += "Use: shipsave_unblacklist [player] [ship_id]";
                 callback(result);
                 _pendingAdminRequests.Remove(key);
             }
-        }
-        
-        public static string? FindPlayerShipByBinding(string adminName, string playerName, string shipId)
-        {
-            var key = $"player_ships_{adminName}";
-            if (_playerShipCache.TryGetValue(key, out var ships))
-            {
-                var ship = ships.FirstOrDefault(s => 
-                    Content.Server.Administration.Commands.ShipBlacklistService.ExtractServerBinding(s.checksum) == shipId);
-                return ship.checksum;
-            }
-            return null;
         }
 
         private void OnAdminSendShipData(AdminSendShipDataMessage msg, EntitySessionEventArgs args)

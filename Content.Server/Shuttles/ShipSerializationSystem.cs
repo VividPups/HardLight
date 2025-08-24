@@ -33,11 +33,9 @@ using static Content.Shared.Decals.DecalGridComponent;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics;
 using Robust.Shared.Configuration;
-using System.Security.Cryptography;
 using Content.Shared._NF.CCVar;
 using Robust.Shared.Player;
 using Robust.Server.Player;
-using Content.Server.Administration.Commands;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.Components.SolutionManager;
 using Content.Shared.Paper;
@@ -62,12 +60,8 @@ namespace Content.Server.Shuttles.Save
         [Dependency] private readonly ServerIdentityService _serverIdentity = default!;
         [Dependency] private readonly SharedTransformSystem _transformSystem = default!;
         [Dependency] private readonly IGameTiming _gameManager = default!;
-        
+
         private ISawmill _sawmill = default!;
-        
-        // Checksum cache to avoid regeneration during validation
-        private readonly Dictionary<string, string> _checksumCache = new();
-        private readonly Dictionary<string, string> _fastChecksumCache = new();
 
         private ISerializer _serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
@@ -86,26 +80,6 @@ namespace Content.Server.Shuttles.Save
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-            
-            // Clear caches periodically to prevent memory leaks (every 5 minutes)
-            if (_gameManager.RealTime.TotalSeconds % 300 < 1.0)
-            {
-                ClearChecksumCaches();
-            }
-        }
-        
-        private void ClearChecksumCaches()
-        {
-            var checksumCacheSize = _checksumCache.Count;
-            var fastChecksumCacheSize = _fastChecksumCache.Count;
-            
-            _checksumCache.Clear();
-            _fastChecksumCache.Clear();
-            
-            if (checksumCacheSize > 0 || fastChecksumCacheSize > 0)
-            {
-                _sawmill.Debug($"Cleared checksum caches: {checksumCacheSize} legacy, {fastChecksumCacheSize} fast entries");
-            }
         }
 
     public ShipGridData SerializeShip(EntityUid gridId, NetUserId playerId, string shipName)
@@ -139,16 +113,16 @@ namespace Content.Server.Shuttles.Save
                 if (tileDef.ID == "Space") // Skip space tiles
                     continue;
 
-                gridData.Tiles.Add(new TileData 
-                { 
-                    X = tile.GridIndices.X, 
-                    Y = tile.GridIndices.Y, 
-                    TileType = tileDef.ID 
+                gridData.Tiles.Add(new TileData
+                {
+                    X = tile.GridIndices.X,
+                    Y = tile.GridIndices.Y,
+                    TileType = tileDef.ID
                 });
             }
 
             // Serialized tiles
-            
+
 
             // Skip atmosphere serialization as TileAtmosphere is not serializable
             // Atmosphere will be restored using fixgridatmos command during loading
@@ -176,16 +150,16 @@ namespace Content.Server.Shuttles.Save
 
             // Optimized entity serialization - uses faster grid child enumeration
             var serializedEntities = new HashSet<EntityUid>();
-            
+
             // Use grid's child enumerator instead of global entity query for better performance
             var gridTransform = _entityManager.GetComponent<TransformComponent>(gridId);
             var childEnumerator = gridTransform.ChildEnumerator;
-            
+
             while (childEnumerator.MoveNext(out var childUid))
             {
                 if (!_entityManager.TryGetComponent<TransformComponent>(childUid, out var childTransform))
                     continue;
-                    
+
                 var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(childUid);
                 var proto = meta?.EntityPrototype?.ID ?? string.Empty;
 
@@ -205,7 +179,7 @@ namespace Content.Server.Shuttles.Save
             ValidateContainerRelationships(gridData);
 
             shipGridData.Grids.Add(gridData);
-            
+
             // Check for overlapping entities at same coordinates AFTER serialization
             var positionGroups = gridData.Entities.GroupBy(e => new { e.Position.X, e.Position.Y }).Where(g => g.Count() > 1);
             if (positionGroups.Any())
@@ -216,11 +190,8 @@ namespace Content.Server.Shuttles.Save
                     _sawmill.Warning($"  Position ({group.Key.X}, {group.Key.Y}): {string.Join(", ", group.Select(e => e.Prototype))}");
                 }
             }
-            
-            // Generate server-bound checksum AFTER all data is finalized
-            var checksum = GenerateServerBoundChecksum(shipGridData);
-            shipGridData.Metadata.Checksum = checksum;
-            _sawmill.Info($"Ship serialized with checksum: {checksum.Substring(0, Math.Min(30, checksum.Length))}...");
+
+            _sawmill.Info($"Ship serialized successfully");
 
             return shipGridData;
         }
@@ -251,71 +222,7 @@ namespace Content.Server.Shuttles.Save
                 throw;
             }
 
-            // Store original checksum BEFORE any calculations
-            var originalStoredChecksum = data.Metadata.Checksum;
-            // Original stored checksum
-            
-            // Check if this is a server-bound checksum
-            if (originalStoredChecksum.StartsWith("S:"))
-            {
-                // Check blacklist first
-                if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
-                {
-                    var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
-                    _sawmill.Warning($"SECURITY: Blacklisted ship load attempt blocked - {reason}");
-                    throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
-                }
-                
-                // Validate server-bound checksum
-                var isValid = ValidateServerBoundChecksum(originalStoredChecksum, data);
-                if (!isValid)
-                {
-                    throw new UnauthorizedAccessException("Server-bound checksum validation failed!");
-                }
-            }
-            else
-            {
-                // Check blacklist for legacy checksums too
-                if (ShipBlacklistService.IsBlacklisted(originalStoredChecksum))
-                {
-                    var reason = ShipBlacklistService.GetBlacklistReason(originalStoredChecksum);
-                    _sawmill.Warning($"SECURITY: Blacklisted ship load attempt blocked - {reason}");
-                    throw new UnauthorizedAccessException($"This ship has been blacklisted by server administration: {reason}");
-                }
-                // Legacy checksum validation
-                var actualChecksum = GenerateChecksum(data.Grids);
-                
-                // Verify the stored checksum wasn't modified
-                if (data.Metadata.Checksum != originalStoredChecksum)
-                {
-                    _sawmill.Error($"BUG: Stored checksum was modified during GenerateChecksum! Was: {originalStoredChecksum}, Now: {data.Metadata.Checksum}");
-                }
-                
-                // Expected checksum
-                // Actual checksum
-                // Grid count
-                // Tile count
-                // Entity count
-                
-                // Check if checksum validation is enabled via cvar
-                var checksumValidationEnabled = _configManager.GetCVar(NFCCVars.ShipyardChecksumValidation);
-            
-                if (checksumValidationEnabled)
-                {
-                    // Enhanced validation with automatic legacy migration
-                    ValidateLegacyChecksumAndMigrate(originalStoredChecksum, actualChecksum, data, out wasLegacyConverted);
-                }
-                else
-                {
-                    _sawmill.Info("Checksum validation disabled by server configuration");
-                }
-            }
-
-
-            if (data.Metadata.PlayerId != loadingPlayerId.ToString())
-            {
-                throw new UnauthorizedAccessException("Player ID mismatch! You can only load ships you have saved.");
-            }
+            // Player ID check removed - anyone can load any ship file
 
             return data;
         }
@@ -331,10 +238,10 @@ namespace Content.Server.Shuttles.Save
             var primaryGridData = shipGridData.Grids[0];
             // Primary grid entities
             // Primary grid tiles
-            
+
             var newGrid = _mapManager.CreateGrid(targetMap);
             // Created new grid
-            
+
             // Note: Grid splitting prevention would require internal access
             // TODO: Investigate alternative approaches to prevent grid splitting
 
@@ -387,17 +294,17 @@ namespace Content.Server.Shuttles.Save
                     var decalChunkCollection = _deserializer.Deserialize<DecalGridChunkCollection>(primaryGridData.DecalData);
                     var decalsRestored = 0;
                     var decalsFailed = 0;
-                    
+
                     // Ensure the grid has a DecalGridComponent
                     _entityManager.EnsureComponent<DecalGridComponent>(newGrid.Owner);
-                    
+
                     foreach (var (chunkPos, chunk) in decalChunkCollection.ChunkCollection)
                     {
                         foreach (var (decalId, decal) in chunk.Decals)
                         {
                             // Convert the decal coordinates to EntityCoordinates on the new grid
                             var decalCoords = new EntityCoordinates(newGrid.Owner, decal.Coordinates);
-                            
+
                             // Use the DecalSystem to properly add the decal
                             if (_decalSystem.TryAddDecal(decal.Id, decalCoords, out _, decal.Color, decal.Angle, decal.ZIndex, decal.Cleanable))
                             {
@@ -410,7 +317,7 @@ namespace Content.Server.Shuttles.Save
                             }
                         }
                     }
-                    
+
                     _sawmill.Info($"Restored {decalsRestored} decals from {decalChunkCollection.ChunkCollection.Count} chunks");
                     if (decalsFailed > 0)
                     {
@@ -429,10 +336,10 @@ namespace Content.Server.Shuttles.Save
 
             // Two-phase entity reconstruction to handle containers properly
             // Starting two-phase entity reconstruction
-            
+
             var entityIdMapping = new Dictionary<string, EntityUid>();
             var spawnedEntities = new List<(EntityUid entity, string prototype, Vector2 position)>();
-            
+
             // Check if this is a legacy save without container data
             var hasContainerData = primaryGridData.Entities.Any(e => e.IsContainer || e.IsContained);
             if (!hasContainerData)
@@ -441,23 +348,23 @@ namespace Content.Server.Shuttles.Save
                 ReconstructEntitiesLegacyMode(primaryGridData, newGrid, entityIdMapping);
                 return newGrid.Owner;
             }
-            
+
             // Phase 1: Spawn all non-contained entities (containers, infrastructure, furniture)
             // Pre-filter entities into separate lists in a single pass
             var nonContainedEntities = new List<EntityData>();
             var containedEntitiesList = new List<EntityData>();
-            
+
             foreach (var entity in primaryGridData.Entities)
             {
                 if (string.IsNullOrEmpty(entity.Prototype))
                     continue;
-                    
+
                 if (entity.IsContained)
                     containedEntitiesList.Add(entity);
                 else
                     nonContainedEntities.Add(entity);
             }
-            
+
             foreach (var entityData in nonContainedEntities)
             {
 
@@ -465,7 +372,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
                     var newEntity = SpawnEntityWithComponents(entityData, coordinates);
-                    
+
                     if (newEntity != null)
                     {
                         entityIdMapping[entityData.EntityId] = newEntity.Value;
@@ -477,14 +384,14 @@ namespace Content.Server.Shuttles.Save
                     _sawmill.Error($"Failed to spawn entity {entityData.Prototype}: {ex.Message}");
                 }
             }
-            
+
             // Phase 1 complete
-            
+
             // Phase 2: Spawn contained entities and insert them into containers
             // Phase 2: Spawning contained entities
             var containedSpawned = 0;
             var containedFailed = 0;
-            
+
             foreach (var entityData in containedEntitiesList)
             {
 
@@ -493,13 +400,13 @@ namespace Content.Server.Shuttles.Save
                     // Spawn the entity in a temporary location (will be moved to container)
                     var tempCoordinates = new EntityCoordinates(newGrid.Owner, Vector2.Zero);
                     var containedEntity = SpawnEntityWithComponents(entityData, tempCoordinates);
-                    
+
                     if (containedEntity != null)
                     {
                         entityIdMapping[entityData.EntityId] = containedEntity.Value;
-                        
+
                         // Try to insert into the parent container
-                        if (!string.IsNullOrEmpty(entityData.ParentContainerEntity) && 
+                        if (!string.IsNullOrEmpty(entityData.ParentContainerEntity) &&
                             !string.IsNullOrEmpty(entityData.ContainerSlot) &&
                             entityIdMapping.TryGetValue(entityData.ParentContainerEntity, out var parentContainer))
                         {
@@ -530,15 +437,15 @@ namespace Content.Server.Shuttles.Save
                     containedFailed++;
                 }
             }
-            
+
             // Phase 2 complete
-            
+
             // Log basic reconstruction statistics (only if there are failures)
             if (containedFailed > 0)
             {
                 _sawmill.Warning($"{containedFailed} contained entities could not be properly placed");
             }
-            
+
             // Skip expensive overlap/verification checking for performance
 
             return newGrid.Owner;
@@ -554,14 +461,14 @@ namespace Content.Server.Shuttles.Save
 
             var primaryGridData = shipGridData.Grids[0];
             // Primary grid entities
-            
+
             // Note: Grid splitting prevention would require internal access
             // TODO: Investigate alternative approaches to prevent grid splitting
-            
+
             // Create a new map for the ship instead of using MapId.Nullspace
             _map.CreateMap(out var mapId);
             _sawmill.Info($"Created new map {mapId}");
-            
+
             var newGrid = _mapManager.CreateGrid(mapId);
             _sawmill.Info($"Created new grid {newGrid.Owner} on map {mapId}");
 
@@ -610,17 +517,17 @@ namespace Content.Server.Shuttles.Save
                     var decalChunkCollection = _deserializer.Deserialize<DecalGridChunkCollection>(primaryGridData.DecalData);
                     var decalsRestored = 0;
                     var decalsFailed = 0;
-                    
+
                     // Ensure the grid has a DecalGridComponent
                     _entityManager.EnsureComponent<DecalGridComponent>(newGrid.Owner);
-                    
+
                     foreach (var (chunkPos, chunk) in decalChunkCollection.ChunkCollection)
                     {
                         foreach (var (decalId, decal) in chunk.Decals)
                         {
                             // Convert the decal coordinates to EntityCoordinates on the new grid
                             var decalCoords = new EntityCoordinates(newGrid.Owner, decal.Coordinates);
-                            
+
                             // Use the DecalSystem to properly add the decal
                             if (_decalSystem.TryAddDecal(decal.Id, decalCoords, out _, decal.Color, decal.Angle, decal.ZIndex, decal.Cleanable))
                             {
@@ -633,7 +540,7 @@ namespace Content.Server.Shuttles.Save
                             }
                         }
                     }
-                    
+
                     _sawmill.Info($"Restored {decalsRestored} decals from {decalChunkCollection.ChunkCollection.Count} chunks");
                     if (decalsFailed > 0)
                     {
@@ -664,7 +571,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
                     var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
-                    
+
                     // Apply rotation if it exists
                     if (Math.Abs(entityData.Rotation) > 0.001f)
                     {
@@ -672,7 +579,7 @@ namespace Content.Server.Shuttles.Save
                         transform.LocalRotation = new Angle(entityData.Rotation);
                     }
 
-                    
+
                     _sawmill.Debug($"Spawned entity {newEntity} ({entityData.Prototype}) at {entityData.Position}");
                 }
                 catch (Exception ex)
@@ -691,40 +598,40 @@ namespace Content.Server.Shuttles.Save
             if (_entityManager.TryGetComponent<TransformComponent>(entityUid, out var transformComp))
             {
                 var parent = transformComp.ParentUid;
-                
+
                 // Direct grid children should always be included (pipes, cables, fixtures, etc.)
                 if (parent == gridId)
                 {
                     return false;
                 }
-                
+
                 while (parent.IsValid() && parent != gridId)
                 {
                     // Get the entity prototype to make smarter containment decisions
                     var meta = _entityManager.GetComponentOrNull<MetaDataComponent>(parent);
                     var parentProto = meta?.EntityPrototype?.ID ?? string.Empty;
-                    
+
                     // Allow infrastructure entities even if they have complex hierarchies
-                    if (parentProto.Contains("Pipe") || parentProto.Contains("Cable") || 
+                    if (parentProto.Contains("Pipe") || parentProto.Contains("Cable") ||
                         parentProto.Contains("Conduit") || parentProto.Contains("Atmos") ||
                         parentProto.Contains("Wire") || parentProto.Contains("Junction"))
                     {
                         return false;
                     }
-                    
+
                     // If we find a parent that has a ContainerManagerComponent, this entity is contained
                     // BUT exclude certain infrastructure containers that should be serialized
                     if (_entityManager.HasComponent<ContainerManagerComponent>(parent))
                     {
                         // Allow entities in certain "infrastructure" containers
-                        if (parentProto.Contains("Pipe") || parentProto.Contains("Machine") || 
+                        if (parentProto.Contains("Pipe") || parentProto.Contains("Machine") ||
                             parentProto.Contains("Console") || parentProto.Contains("Computer"))
                         {
                             return false;
                         }
                         return true;
                     }
-                    
+
                     // Move up the hierarchy
                     if (_entityManager.TryGetComponent<TransformComponent>(parent, out var parentTransform))
                         parent = parentTransform.ParentUid;
@@ -749,7 +656,7 @@ namespace Content.Server.Shuttles.Save
                 var netEntity = _entityManager.GetNetEntity(gridUid);
                 var commandArgs = $"fixgridatmos {netEntity}";
                 _sawmill.Info($"Running fixgridatmos command: {commandArgs}");
-                
+
                 try
                 {
                     _consoleHost.ExecuteCommand(null, commandArgs);
@@ -762,263 +669,17 @@ namespace Content.Server.Shuttles.Save
             });
         }
 
-
-        private string GenerateChecksum(List<GridData> grids)
-        {
-            // Check if fast checksums are enabled
-            var useFastChecksums = _configManager.GetCVar(NFCCVars.ShipyardFastChecksums);
-            
-            if (useFastChecksums)
-            {
-                return GenerateFastChecksum(grids);
-            }
-            else
-            {
-                return GenerateLegacyChecksum(grids);
-            }
-        }
-        
-        private string GenerateFastChecksum(List<GridData> grids)
-        {
-            // Create cache key from grid structure
-            var cacheKey = string.Join("|", grids.Select(g => $"{g.GridId}:{g.Tiles.Count}:{g.Entities.Count}"));
-            
-            // Check cache first
-            if (_fastChecksumCache.TryGetValue(cacheKey, out var cachedChecksum))
-            {
-                _sawmill.Debug($"Using cached fast checksum: {cachedChecksum}");
-                return cachedChecksum;
-            }
-            
-            // Fast SHA-based checksum focusing on deterministic, serializable data only
-            var hashInput = new StringBuilder();
-            
-            foreach (var grid in grids)
-            {
-                // Core grid structure (always deterministic)
-                hashInput.Append($"G{grid.GridId}:T{grid.Tiles.Count}:E{grid.Entities.Count}:");
-                
-                // Tile data hash (no sorting, XOR-based for speed)
-                var tileDataHash = 0;
-                foreach (var tile in grid.Tiles)
-                {
-                    tileDataHash ^= ComputeStringHash($"{tile.TileType}{tile.X}{tile.Y}");
-                }
-                hashInput.Append($"TH{tileDataHash}:");
-                
-                // Entity essentials hash (prototype + position only, no unreliable component data)
-                var entityDataHash = 0;
-                foreach (var entity in grid.Entities)
-                {
-                    if (!string.IsNullOrEmpty(entity.Prototype))
-                    {
-                        var posX = Math.Round(entity.Position.X, 1);
-                        var posY = Math.Round(entity.Position.Y, 1);
-                        entityDataHash ^= ComputeStringHash($"{entity.Prototype}{posX}{posY}");
-                    }
-                }
-                hashInput.Append($"EH{entityDataHash}:");
-                
-                // Container relationship counts (deterministic, no component chaos)
-                var containerCount = grid.Entities.Count(e => e.IsContainer);
-                var containedCount = grid.Entities.Count(e => e.IsContained);
-                hashInput.Append($"C{containerCount}x{containedCount};");
-            }
-            
-            // Remove trailing semicolon
-            var finalInput = hashInput.ToString().TrimEnd(';');
-            var dataHash = ComputeSha256Hash(finalInput);
-            var result = $"FAST:{dataHash[..16]}"; // 16-char hash for performance
-            
-            // Cache the result
-            _fastChecksumCache[cacheKey] = result;
-            
-            _sawmill.Info($"Generated fast checksum for {grids.Count} grids, {grids.Sum(g => g.Entities.Count)} entities (hash: {dataHash[..8]}...)");
-            return result;
-        }
-        
-        private string GenerateLegacyChecksum(List<GridData> grids)
-        {
-            // Original enhanced tamper-detection checksum (kept for compatibility)
-            var checksumBuilder = new StringBuilder();
-            
-            foreach (var grid in grids)
-            {
-                // Grid identifier
-                checksumBuilder.Append($"G{grid.GridId}:");
-                
-                // Tile summary
-                var sortedTiles = grid.Tiles.OrderBy(t => t.X).ThenBy(t => t.Y).ToList();
-                checksumBuilder.Append($"T{sortedTiles.Count}");
-                
-                // Tile type counts for tamper detection
-                var tileTypeCounts = sortedTiles.GroupBy(t => t.TileType).OrderBy(g => g.Key)
-                    .Select(g => $"{g.Key.Substring(0, Math.Min(4, g.Key.Length))}{g.Count()}").ToList();
-                checksumBuilder.Append($"[{string.Join(",", tileTypeCounts)}]");
-                
-                // Entity summary with container information
-                var sortedEntities = grid.Entities.OrderBy(e => e.Position.X).ThenBy(e => e.Position.Y).ToList();
-                checksumBuilder.Append($":E{sortedEntities.Count}");
-                
-                // Entity prototype counts - optimized grouping
-                checksumBuilder.Append('[');
-                var first = true;
-                foreach (var group in sortedEntities.GroupBy(e => e.Prototype).OrderBy(g => g.Key))
-                {
-                    if (!first) checksumBuilder.Append(',');
-                    checksumBuilder.Append(group.Key.Substring(0, Math.Min(6, group.Key.Length)));
-                    checksumBuilder.Append(group.Count());
-                    first = false;
-                }
-                checksumBuilder.Append(']');
-                
-                // Pre-calculate container counts and components in a single pass
-                var containerCount = 0;
-                var containedCount = 0;
-                var totalComponents = 0;
-                var componentTypes = new Dictionary<string, int>();
-                
-                foreach (var entity in sortedEntities)
-                {
-                    if (entity.IsContainer) containerCount++;
-                    if (entity.IsContained) containedCount++;
-                    totalComponents += entity.Components.Count;
-                    
-                    foreach (var component in entity.Components)
-                    {
-                        componentTypes[component.Type] = componentTypes.GetValueOrDefault(component.Type, 0) + 1;
-                    }
-                }
-                
-                checksumBuilder.Append($":C{containerCount}x{containedCount}");
-                checksumBuilder.Append($":CM{totalComponents}[");
-                
-                var componentGroups = componentTypes.OrderBy(kv => kv.Key).Take(10);
-                first = true;
-                foreach (var group in componentGroups)
-                {
-                    if (!first) checksumBuilder.Append(',');
-                    checksumBuilder.Append(group.Key.Substring(0, Math.Min(3, group.Key.Length)));
-                    checksumBuilder.Append(group.Value);
-                    first = false;
-                }
-                checksumBuilder.Append(']');
-                
-                // Position checksum for tamper detection (including container relationships)
-                var tileCoordSum = sortedTiles.Sum(t => t.X * 100 + t.Y);
-                var entityPosSum = (int)sortedEntities.Sum(e => e.Position.X * 100 + e.Position.Y * 100);
-                // Use deterministic string hash instead of GetHashCode for container relationships
-                var containerRelationSum = sortedEntities
-                    .Where(e => e.IsContained && !string.IsNullOrEmpty(e.ParentContainerEntity))
-                    .Sum(e => ComputeStringHash(e.ParentContainerEntity!) % 10000);
-                checksumBuilder.Append($":P{tileCoordSum + entityPosSum + containerRelationSum}");
-                
-                checksumBuilder.Append(";");
-            }
-            
-            var checksum = checksumBuilder.ToString().TrimEnd(';');
-            _sawmill.Info($"Enhanced container-aware tamper-detection checksum: {checksum} (length: {checksum.Length})");
-            
-            return checksum;
-        }
-        
-        private string GenerateServerBoundChecksum(ShipGridData data)
-        {
-            var baseChecksum = GenerateChecksum(data.Grids);
-            var serverHardwareId = _serverIdentity.GetServerHardwareId();
-            
-            // Create server binding hash (use 8 chars for shorter length)
-            var serverBinding = ComputeSha256Hash($"{serverHardwareId}:{baseChecksum}");
-            var serverBindingShort = serverBinding.Substring(0, 8);
-            
-            var serverBoundChecksum = $"S:{serverBindingShort}:{baseChecksum}";
-            
-            _sawmill.Info($"Generated server-bound checksum with binding: {serverBindingShort}");
-            return serverBoundChecksum;
-        }
-        
-        private static int ComputeSimpleHash(string input)
-        {
-            // Fast hash for performance - simple XOR-based hash
-            var hash = 0;
-            foreach (char c in input)
-            {
-                hash ^= c;
-                hash = (hash << 1) | (hash >> 31); // Rotate left
-            }
-            return hash & 0x7FFFFFFF; // Ensure positive
-        }
-        
-        private bool ValidateServerBoundChecksum(string storedChecksum, ShipGridData data)
-        {
-            var parts = storedChecksum.Split(':', 3);
-            if (parts.Length < 3 || parts[0] != "S")
-            {
-                _sawmill.Error("Invalid server-bound checksum format");
-                return false;
-            }
-            
-            var storedServerBinding = parts[1];
-            var storedBaseChecksum = parts[2];
-            
-            // Calculate actual base checksum
-            var actualBaseChecksum = GenerateChecksum(data.Grids);
-            
-            // Verify base checksum first
-            if (!string.Equals(storedBaseChecksum, actualBaseChecksum, StringComparison.OrdinalIgnoreCase))
-            {
-                _sawmill.Error("SECURITY VIOLATION: Base checksum validation failed - ship data tampered");
-                _sawmill.Error($"Expected: {storedBaseChecksum}");
-                _sawmill.Error($"Actual: {actualBaseChecksum}");
-                return false;
-            }
-            
-            // Verify server binding
-            var currentServerHardwareId = _serverIdentity.GetServerHardwareId();
-            var expectedBinding = ComputeSha256Hash($"{currentServerHardwareId}:{storedBaseChecksum}");
-            
-            if (!expectedBinding.StartsWith(storedServerBinding))
-            {
-                _sawmill.Error("SECURITY: Server binding validation failed - ship from different server rejected");
-                _sawmill.Info($"Security feature: Prevents loading dev ships on production servers");
-                return false;
-            }
-            
-            _sawmill.Info("Server-bound checksum validation passed successfully");
-            return true;
-        }
-        
-        private static string ComputeSha256Hash(string input)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-            return Convert.ToHexString(bytes).ToLowerInvariant();
-        }
-        
-        private static int ComputeStringHash(string input)
-        {
-            // Deterministic string hash using simple FNV-1a algorithm
-            uint hash = 2166136261u;
-            foreach (byte b in Encoding.UTF8.GetBytes(input))
-            {
-                hash ^= b;
-                hash *= 16777619u;
-            }
-            return (int)(hash & 0x7FFFFFFF); // Ensure positive
-        }
-
         public string GetConvertedLegacyShipYaml(ShipGridData shipData, string playerName, string originalYamlString)
         {
             try
             {
                 _sawmill.Info($"Generating converted YAML for legacy ship file for player {playerName}");
-                
-                // Serialize the updated ship data with new checksum
+
+                // Serialize the updated ship data
                 var convertedYamlString = SerializeShipGridDataToYaml(shipData);
-                
-                var originalChecksum = ExtractOriginalChecksum(originalYamlString);
-                _sawmill.Info($"Ship '{shipData.Metadata.ShipName}' converted from legacy SHA checksum '{originalChecksum}' to secure format '{shipData.Metadata.Checksum}'");
-                
+
+                _sawmill.Info($"Ship '{shipData.Metadata.ShipName}' converted successfully");
+
                 return convertedYamlString;
             }
             catch (Exception ex)
@@ -1027,25 +688,11 @@ namespace Content.Server.Shuttles.Save
                 return string.Empty;
             }
         }
-        
-        private string ExtractOriginalChecksum(string yamlString)
-        {
-            // Simple regex to extract the original checksum from YAML
-            var lines = yamlString.Split('\n');
-            foreach (var line in lines)
-            {
-                if (line.Trim().StartsWith("checksum:"))
-                {
-                    return line.Split(':')[1].Trim().Trim('"');
-                }
-            }
-            return "unknown";
-        }
 
         private List<ComponentData> SerializeEntityComponents(EntityUid entityUid)
         {
             var componentDataList = new List<ComponentData>();
-            
+
             try
             {
                 // Get all components on the entity
@@ -1125,7 +772,7 @@ namespace Content.Server.Shuttles.Save
             catch (Exception ex)
             {
                 var componentType = component.GetType();
-                
+
                 // Don't log warnings for expected problematic components
                 if (IsProblematicComponent(componentType))
                 {
@@ -1149,19 +796,19 @@ namespace Content.Server.Shuttles.Save
         private bool IsProblematicComponent(Type componentType)
         {
             var typeName = componentType.Name;
-            
+
             // Network/client-side components that cause serialization issues
             if (typeName.Contains("Network") || typeName.Contains("Client") || typeName.Contains("Ui"))
                 return true;
-                
+
             // Timing/temporary components that shouldn't be preserved
             if (typeName.Contains("Timer") || typeName.Contains("Temporary") || typeName.Contains("Transient"))
                 return true;
-                
+
             // Event/notification components
             if (typeName.Contains("Event") || typeName.Contains("Alert") || typeName.Contains("Notification"))
                 return true;
-                
+
             // Runtime/generated components
             if (typeName.Contains("Runtime") || typeName.Contains("Generated") || typeName.Contains("Dynamic"))
                 return true;
@@ -1187,7 +834,7 @@ namespace Content.Server.Shuttles.Save
             {
                 // Create a simplified representation of the solution data for better preservation
                 var solutionData = new Dictionary<string, object>();
-                
+
                 foreach (var (solutionName, solution) in solutionManager.Solutions ?? new Dictionary<string, Solution>())
                 {
                     var solutionInfo = new Dictionary<string, object>
@@ -1196,7 +843,7 @@ namespace Content.Server.Shuttles.Save
                         ["MaxVolume"] = solution.MaxVolume,
                         ["Temperature"] = solution.Temperature,
                         ["Reagents"] = solution.Contents?.ToDictionary(
-                            reagent => reagent.Reagent.Prototype, 
+                            reagent => reagent.Reagent.Prototype,
                             reagent => (object)reagent.Quantity
                         ) ?? new Dictionary<string, object>()
                     };
@@ -1222,28 +869,28 @@ namespace Content.Server.Shuttles.Save
 
 
         private static readonly Dictionary<Type, bool> ComponentSkipCache = new();
-        
+
         private bool ShouldSkipComponent(Type componentType)
         {
             if (ComponentSkipCache.TryGetValue(componentType, out var cached))
                 return cached;
-                
+
             var typeName = componentType.Name;
-            
+
             var shouldSkip = false;
-            
+
             // Skip transform components (position handled separately)
             if (typeName == "TransformComponent")
                 shouldSkip = true;
-                
+
             // Skip metadata components (handled separately)
             else if (typeName == "MetaDataComponent")
                 shouldSkip = true;
-                
+
             // Skip physics components (usually regenerated)
             else if (typeName.Contains("Physics"))
                 shouldSkip = true;
-                
+
             // Skip appearance/visual components (usually regenerated)
             else if (typeName.Contains("Appearance") || typeName.Contains("Sprite"))
                 shouldSkip = true;
@@ -1251,7 +898,7 @@ namespace Content.Server.Shuttles.Save
             // Skip network/client-side components
             else if (typeName.Contains("Eye") || typeName.Contains("Input") || typeName.Contains("UserInterface"))
                 shouldSkip = true;
-                
+
             ComponentSkipCache[componentType] = shouldSkip;
             return shouldSkip;
         }
@@ -1259,40 +906,40 @@ namespace Content.Server.Shuttles.Save
         private bool IsImportantComponent(Type componentType)
         {
             var typeName = componentType.Name;
-            
+
             // Chemical/solution components - high priority for preservation
             if (typeName.Contains("Solution") || typeName.Contains("Chemical"))
                 return true;
-                
+
             // Book and text components (paper no longer preserved)
             if (typeName.Contains("Book") || typeName.Contains("SignComponent"))
                 return true;
-                
+
             // Storage and container components
             if (typeName.Contains("Storage") || typeName.Contains("Container"))
                 return true;
-                
+
             // Seed and plant components (GMO preservation)
             if (typeName.Contains("Seed") || typeName.Contains("Plant") || typeName.Contains("Produce"))
                 return true;
-                
+
             // Stack and quantity components
             if (typeName.Contains("Stack") || typeName.Contains("Quantity"))
                 return true;
-                
+
             // Power and battery components
             if (typeName.Contains("Battery") || typeName.Contains("PowerCell"))
                 return true;
-                
+
             // Generator and fuel components (PACMAN, AME, etc.)
-            if (typeName.Contains("Generator") || typeName.Contains("Fuel") || typeName.Contains("AME") || 
+            if (typeName.Contains("Generator") || typeName.Contains("Fuel") || typeName.Contains("AME") ||
                 typeName.Contains("PACMAN") || typeName.Contains("Reactor") || typeName.Contains("Engine"))
                 return true;
-                
+
             // Power/energy storage and distribution
             if (typeName.Contains("Power") || typeName.Contains("Energy") || typeName.Contains("Charge"))
                 return true;
-                
+
             // Machine state components
             if (typeName.Contains("Machine") || typeName.Contains("Processor") || typeName.Contains("Fabricator"))
                 return true;
@@ -1340,7 +987,7 @@ namespace Content.Server.Shuttles.Save
                         .Select(idx => _entityManager.ComponentFactory.GetRegistration(idx).Type)
                         .Where(t => t.Name == componentData.Type || t.Name.EndsWith($".{componentData.Type}"))
                         .FirstOrDefault();
-                        
+
                     if (componentTypes != null && (IsImportantComponent(componentTypes) && !IsProblematicComponent(componentTypes)))
                     {
                         _sawmill.Warning($"Failed to restore important component {componentData.Type} on entity {entityUid}: {ex.Message}");
@@ -1402,7 +1049,7 @@ namespace Content.Server.Shuttles.Save
                 }
 
                 var componentType = componentTypes.First();
-                
+
                 // Skip problematic components during restoration too
                 if (IsProblematicComponent(componentType))
                 {
@@ -1412,7 +1059,7 @@ namespace Content.Server.Shuttles.Save
 
                 // Deserialize the component data
                 var node = _deserializer.Deserialize<DataNode>(componentData.YamlData);
-                
+
                 // Ensure the entity has this component
                 if (!_entityManager.HasComponent(entityUid, componentType))
                 {
@@ -1430,7 +1077,7 @@ namespace Content.Server.Shuttles.Save
 
                 // Get the existing component and populate it with saved data
                 var existingComponent = _entityManager.GetComponent(entityUid, componentType);
-                
+
                 try
                 {
                     object? temp = existingComponent;
@@ -1493,7 +1140,7 @@ namespace Content.Server.Shuttles.Save
                         }
 
                         // Restore reagents
-                        if (solutionInfo.TryGetValue("Reagents", out var reagentsObj) && 
+                        if (solutionInfo.TryGetValue("Reagents", out var reagentsObj) &&
                             reagentsObj is Dictionary<string, object> reagents)
                         {
                             foreach (var (reagentId, quantityObj) in reagents)
@@ -1507,8 +1154,8 @@ namespace Content.Server.Shuttles.Save
                         }
 
                         restoredSolutions++;
-                        var reagentCount = solutionInfo.ContainsKey("Reagents") && 
-                                          solutionInfo["Reagents"] is Dictionary<string, object> reagentDict ? 
+                        var reagentCount = solutionInfo.ContainsKey("Reagents") &&
+                                          solutionInfo["Reagents"] is Dictionary<string, object> reagentDict ?
                                           reagentDict.Count : 0;
                         _sawmill.Debug($"Restored solution '{solutionName}' with {reagentCount} reagents");
                     }
@@ -1606,7 +1253,7 @@ namespace Content.Server.Shuttles.Save
         {
             // Find all entities that might be contained within grid entities but not directly on the grid
             var containersToCheck = new Queue<EntityUid>();
-            
+
             // Start with all container entities on the grid
             foreach (var entityData in gridData.Entities.Where(e => e.IsContainer))
             {
@@ -1620,7 +1267,7 @@ namespace Content.Server.Shuttles.Save
             while (containersToCheck.Count > 0)
             {
                 var containerUid = containersToCheck.Dequeue();
-                
+
                 if (!_entityManager.TryGetComponent<ContainerManagerComponent>(containerUid, out var containerManager))
                     continue;
 
@@ -1666,7 +1313,7 @@ namespace Content.Server.Shuttles.Save
             {
                 // Spawn the basic entity
                 var newEntity = _entityManager.SpawnEntity(entityData.Prototype, coordinates);
-                
+
                 // Apply rotation if it exists
                 if (Math.Abs(entityData.Rotation) > 0.001f)
                 {
@@ -1809,7 +1456,7 @@ namespace Content.Server.Shuttles.Save
             foreach (var testPos in searchPositions)
             {
                 var coords = new EntityCoordinates(gridEntity, testPos);
-                
+
                 // Check if position is occupied (basic check)
                 var lookup = _entityManager.System<EntityLookupSystem>();
                 var mapCoords = coords.ToMap(_entityManager, _transformSystem);
@@ -1887,10 +1534,10 @@ namespace Content.Server.Shuttles.Save
         private void ReconstructEntitiesLegacyMode(GridData gridData, MapGridComponent newGrid, Dictionary<string, EntityUid> entityIdMapping)
         {
             _sawmill.Info("Using legacy reconstruction mode for backward compatibility");
-            
+
             var spawnedCount = 0;
             var failedCount = 0;
-            
+
             foreach (var entityData in gridData.Entities)
             {
                 if (string.IsNullOrEmpty(entityData.Prototype))
@@ -1903,7 +1550,7 @@ namespace Content.Server.Shuttles.Save
                 {
                     var coordinates = new EntityCoordinates(newGrid.Owner, entityData.Position);
                     var newEntity = SpawnEntityWithComponents(entityData, coordinates);
-                    
+
                     if (newEntity != null)
                     {
                         entityIdMapping[entityData.EntityId] = newEntity.Value;
@@ -1921,105 +1568,8 @@ namespace Content.Server.Shuttles.Save
                     failedCount++;
                 }
             }
-            
+
             // Legacy reconstruction complete
-        }
-        
-        private void ValidateLegacyChecksumAndMigrate(string originalStoredChecksum, string actualChecksum, ShipGridData data, out bool wasLegacyConverted)
-        {
-            wasLegacyConverted = false;
-            
-            // Detect checksum format and handle appropriately
-            bool isLegacySHA = originalStoredChecksum.Length == 64 && !originalStoredChecksum.Contains(":");
-            bool isLegacyEnhanced = originalStoredChecksum.Contains(":PP-");
-            bool isLegacyBasic = originalStoredChecksum.Contains(":E") && !originalStoredChecksum.Contains(":C") && !originalStoredChecksum.Contains(":CM");
-            bool isCurrentFormat = originalStoredChecksum.Contains(":C") && originalStoredChecksum.Contains(":CM");
-            bool isFastFormat = originalStoredChecksum.StartsWith("FAST:");
-            
-            if (isFastFormat)
-            {
-                // Fast format validation - already current, no migration needed
-                var expectedFastChecksum = GenerateFastChecksum(data.Grids);
-                if (!string.Equals(originalStoredChecksum, expectedFastChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"FAST CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {originalStoredChecksum}");
-                    _sawmill.Error($"Actual: {expectedFastChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Fast checksum mismatch! Ship data may have been tampered with.");
-                }
-                _sawmill.Info("Fast checksum validation passed successfully");
-            }
-            else if (isLegacySHA)
-            {
-                // Legacy SHA256 checksum - auto-migrate to fast format
-                _sawmill.Warning($"Legacy SHA256 checksum detected: {originalStoredChecksum[..16]}...");
-                _sawmill.Info($"Legacy SHA checksum detected - ship will be converted to fast format");
-                
-                // Generate new fast checksum and mark for conversion
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy SHA ship auto-migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isLegacyEnhanced)
-            {
-                // Handle legacy enhanced format - validate then migrate to fast
-                var cleanStoredChecksum = originalStoredChecksum.Substring(0, originalStoredChecksum.IndexOf(":PP-"));
-                _sawmill.Info($"Detected legacy enhanced checksum format, validating then migrating...");
-                
-                if (!string.Equals(cleanStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"LEGACY ENHANCED CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {cleanStoredChecksum}");
-                    _sawmill.Error($"Actual: {actualChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-                }
-                
-                // Validation passed - migrate to fast format
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy enhanced checksum validated and migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isLegacyBasic)
-            {
-                // Legacy basic format - migrate to fast format (can't validate reliably)
-                _sawmill.Warning($"Legacy basic checksum detected: {originalStoredChecksum}");
-                _sawmill.Info($"Basic checksum detected - ship will be upgraded to fast format");
-                
-                // For basic format, we can't do comprehensive validation, but we can migrate
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Legacy basic checksum migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else if (isCurrentFormat)
-            {
-                // Current enhanced format - validate then migrate to fast
-                if (!string.Equals(originalStoredChecksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
-                {
-                    _sawmill.Error($"ENHANCED CHECKSUM VALIDATION FAILED!");
-                    _sawmill.Error($"Expected: {originalStoredChecksum}");
-                    _sawmill.Error($"Actual: {actualChecksum}");
-                    _sawmill.Error($"SECURITY VIOLATION: Ship data tampering detected!");
-                    throw new InvalidOperationException("Checksum mismatch! Ship data may have been tampered with.");
-                }
-                
-                // Validation passed - migrate to fast format
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Enhanced checksum validated and migrated to fast format: {data.Metadata.Checksum}");
-            }
-            else
-            {
-                // Unknown format - allow load but migrate to fast format
-                _sawmill.Warning($"Unknown checksum format detected: {originalStoredChecksum}");
-                _sawmill.Warning($"Migrating to fast format for compatibility...");
-                
-                // Migrate to fast format regardless of validation
-                data.Metadata.Checksum = GenerateFastChecksum(data.Grids);
-                wasLegacyConverted = true;
-                _sawmill.Info($"Unknown format migrated to fast format: {data.Metadata.Checksum}");
-            }
         }
 
     }

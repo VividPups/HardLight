@@ -18,7 +18,7 @@ namespace Content.Client.Shuttles.Save
 
         // Static data shared across all instances to handle multiple system instances
         private static readonly Dictionary<string, string> _staticCachedShipData = new();
-        private static readonly Dictionary<string, (string shipName, DateTime timestamp, string checksum)> _staticShipMetadataCache = new();
+        private static readonly Dictionary<string, (string shipName, DateTime timestamp)> _staticShipMetadataCache = new();
         private static readonly List<string> _staticAvailableShips = new();
         private static event Action? _staticOnShipsUpdated;
         private static event Action<string>? _staticOnShipLoaded;
@@ -195,6 +195,20 @@ namespace Content.Client.Shuttles.Save
 
         public async Task LoadShipFromFile(string filePath)
         {
+            var yamlData = await GetShipYamlData(filePath);
+            if (yamlData != null)
+            {
+                RaiseNetworkEvent(new RequestLoadShipMessage(yamlData));
+
+                // Extract ship name for the event (extract filename without path and extension)
+                var shipName = ExtractFileNameWithoutExtension(filePath);
+                _staticOnShipLoaded?.Invoke(shipName);
+            }
+            await Task.CompletedTask;
+        }
+
+        public async Task<string?> GetShipYamlData(string filePath)
+        {
             string? yamlData;
 
             // Check cache first, load from disk if needed (lazy loading)
@@ -214,19 +228,12 @@ namespace Content.Client.Shuttles.Save
                 catch (Exception ex)
                 {
                     Logger.Error($"Failed to load ship data from {filePath}: {ex.Message}");
-                    return;
+                    return null;
                 }
             }
 
-            if (yamlData != null)
-            {
-                RaiseNetworkEvent(new RequestLoadShipMessage(yamlData));
-
-                // Extract ship name for the event (extract filename without path and extension)
-                var shipName = ExtractFileNameWithoutExtension(filePath);
-                _staticOnShipLoaded?.Invoke(shipName);
-            }
             await Task.CompletedTask;
+            return yamlData;
         }
 
         private void LoadExistingShips()
@@ -349,11 +356,10 @@ namespace Content.Client.Shuttles.Save
                 var lines = content.Split('\n');
                 var shipName = lines.FirstOrDefault(l => l.Trim().StartsWith("shipName:"))?.Split(':')[1].Trim() ?? "Unknown";
                 var timestampStr = lines.FirstOrDefault(l => l.Trim().StartsWith("timestamp:"))?.Split(':', 2)[1].Trim() ?? "";
-                var checksum = lines.FirstOrDefault(l => l.Trim().StartsWith("checksum:"))?.Split(':', 2)[1].Trim() ?? "";
 
                 if (DateTime.TryParse(timestampStr, out var timestamp))
                 {
-                    _staticShipMetadataCache[filePath] = (shipName, timestamp, checksum);
+                    _staticShipMetadataCache[filePath] = (shipName, timestamp);
                 }
             }
             catch (Exception ex)
@@ -407,14 +413,14 @@ namespace Content.Client.Shuttles.Save
                 if (playerManager.LocalSession?.UserId != message.PlayerId)
                     return;
 
-                var ships = new List<(string filename, string shipName, DateTime timestamp, string checksum)>();
+                var ships = new List<(string filename, string shipName, DateTime timestamp)>();
 
                 // Use cached metadata instead of re-parsing YAML
                 foreach (var filename in _staticAvailableShips)
                 {
                     if (_staticShipMetadataCache.TryGetValue(filename, out var metadata))
                     {
-                        ships.Add((filename, metadata.shipName, metadata.timestamp, metadata.checksum));
+                        ships.Add((filename, metadata.shipName, metadata.timestamp));
                     }
                     else
                     {
@@ -424,7 +430,7 @@ namespace Content.Client.Shuttles.Save
                             CacheShipMetadata(filename);
                             if (_staticShipMetadataCache.TryGetValue(filename, out metadata))
                             {
-                                ships.Add((filename, metadata.shipName, metadata.timestamp, metadata.checksum));
+                                ships.Add((filename, metadata.shipName, metadata.timestamp));
                             }
                         }
                         catch (Exception ex)
