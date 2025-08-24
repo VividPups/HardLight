@@ -26,7 +26,7 @@
 - type: gameMap
   id: Verdure
   mapName: 'Verdure'
-  mapPath: /Maps/_NF/Shuttles/verdure.yml
+  mapPath: /Maps/_HL/Shuttles/verdure.yml
   minPlayers: 0
   stations:
     Verdure:
