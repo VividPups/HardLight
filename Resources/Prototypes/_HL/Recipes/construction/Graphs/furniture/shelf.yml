@@ -6,13 +6,10 @@
     edges:
     - to: done
       steps:
-      - material: SteelPlasteel
-        amount: 10
+      - material: Plasteel
+        amount: 30
         doAfter: 5
-      - material: BluespaceOre
-        amount: 5
-        doAfter: 5
-      - material: CableLVstack1
+      - material: Bluespace
         amount: 5
         doAfter: 5
   - node: done
@@ -27,13 +24,10 @@
         welded: false
       completed:
       - !type:SpawnPrototype
-        prototype: SteelPlasteel
+        prototype: SheetPlasteel
         amount: 10
       - !type:SpawnPrototype
-        prototype: BluespaceOre
-        amount: 5
-      - !type:SpawnPrototype
-        prototype: CableLVStack1
+        prototype: MaterialBluespace
         amount: 5
       - !type:EmptyAllContainers
       - !type:DeleteEntity
